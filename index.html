@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>住戶狀態評估與決策支援系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+        background-color: #f8fafc;
+      }
+      /* Custom scrollbar for better aesthetics */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f5f9; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #cbd5e1; 
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #94a3b8; 
+      }
+      
+      @media print {
+        body {
+          background-color: white;
+        }
+        /* Hide everything by default */
+        header, .lg\:col-span-5 {
+          display: none !important;
+        }
+        /* Make report full width */
+        .lg\:col-span-7 {
+          width: 100% !important;
+          grid-column: span 12 / span 12 !important;
+        }
+        .max-w-7xl {
+            max-width: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+        /* Hide scrollbars and overflow limits */
+        .overflow-y-auto {
+            overflow: visible !important;
+            max-height: none !important;
+        }
+        .shadow-sm {
+            box-shadow: none !important;
+        }
+        .border {
+            border: none !important;
+        }
+        /* Hide non-printable elements */
+        .print\:hidden, button {
+            display: none !important;
+        }
+        /* Ensure charts break nicely */
+        .print\:break-inside-avoid {
+            break-inside: avoid;
+        }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "@google/genai": "https://esm.sh/@google/genai@^1.33.0",
+    "react-markdown": "https://esm.sh/react-markdown@^10.1.0",
+    "lucide-react": "https://esm.sh/lucide-react@^0.561.0"
+  }
+}
+</script>
+</head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>
