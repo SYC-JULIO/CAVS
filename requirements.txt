@@ -1,0 +1,4 @@
+Flask
+google-genai
+flask-cors
+gunicorn
