@@ -88,9 +88,286 @@
                         <option value="high">高度</option>
                     </select>
                 </div>
-                
-                <div class="text-center text-gray-400 py-4">
-                    (請在程式碼中補齊 Q3 - Q30 的選單)
+<div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q3. 輕微失智傾向或已有明確診斷？</label>
+                    <select id="q3" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度 (輕微傾向)</option>
+                        <option value="medium">中度 (明確診斷)</option>
+                        <option value="high">高度 (嚴重失智)</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q4. 抗拒他人照顧行為的強度有多高？</label>
+                    <select id="q4" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度</option>
+                        <option value="medium">中度</option>
+                        <option value="high">高度</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q5. 家庭成員是否有溝通不良情況，負面程度為何？</label>
+                    <select id="q5" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度</option>
+                        <option value="medium">中度</option>
+                        <option value="high">高度</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q6. 是否有特殊醫療或長照資源的追蹤？</label>
+                    <select id="q6" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度 (如洗腎)</option>
+                        <option value="medium">中度 (如標靶藥物)</option>
+                        <option value="high">高度 (如換器官)</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q7. 經常性緊急通報頻率為何（跌倒、走失等）？</label>
+                    <select id="q7" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度 (1月1次)</option>
+                        <option value="medium">中度 (1周1次)</option>
+                        <option value="high">高度 (每天)</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q8. 照顧的類型多元程度為何？</label>
+                    <select id="q8" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度</option>
+                        <option value="medium">中度</option>
+                        <option value="high">高度</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q9. 是否具有精神、情緒或成癮議題？</label>
+                    <select id="q9" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度</option>
+                        <option value="medium">中度</option>
+                        <option value="high">高度</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q10. 個案過去暴力行為或危機介入的嚴重程度？</label>
+                    <select id="q10" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度</option>
+                        <option value="medium">中度</option>
+                        <option value="high">高度</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q11. 夜間照顧與守夜的需求程度？</label>
+                    <select id="q11" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度</option>
+                        <option value="medium">中度</option>
+                        <option value="high">高度</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q12. 失蹤、走失經驗危險程度？</label>
+                    <select id="q12" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度</option>
+                        <option value="medium">中度</option>
+                        <option value="high">高度</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q13. 藥品及管理必要程度？</label>
+                    <select id="q13" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度 (忘記吃過沒)</option>
+                        <option value="medium">中度 (知道要吃但不願意吃)</option>
+                        <option value="high">高度 (亂吃或自己調整藥物)</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q14. 對於他人攻擊行為的強度？</label>
+                    <select id="q14" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度 (對討厭的人)</option>
+                        <option value="medium">中度 (不分對象低度)</option>
+                        <option value="high">高度 (不分對象高度)</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q15. 常態性管路照護（導尿管、胃造口）的強度？</label>
+                    <select id="q15" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度</option>
+                        <option value="medium">中度</option>
+                        <option value="high">高度</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q16. 跨系統轉介或社工長期介入的強度？</label>
+                    <select id="q16" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度</option>
+                        <option value="medium">中度</option>
+                        <option value="high">高度</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q17. 目前居住環境是否有增加輔助的需求？</label>
+                    <select id="q17" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度</option>
+                        <option value="medium">中度</option>
+                        <option value="high">高度</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q18. 家庭的經濟負擔與壓力程度？</label>
+                    <select id="q18" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度</option>
+                        <option value="medium">中度</option>
+                        <option value="high">高度</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q19. 是否曾與照服或醫護產生糾紛？</label>
+                    <select id="q19" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度 (單方偶爾)</option>
+                        <option value="medium">中度 (雙方偶爾)</option>
+                        <option value="high">高度 (單方常態)</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q20. 是否有自傷或自殺傾向歷史？</label>
+                    <select id="q20" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度 (很久以前一次)</option>
+                        <option value="medium">中度 (近一年)</option>
+                        <option value="high">高度 (現在仍有)</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q21. 原同住家屬分屬不同城市或國家？</label>
+                    <select id="q21" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度 (少數人)</option>
+                        <option value="medium">中度 (一半以上)</option>
+                        <option value="high">高度 (全部)</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q22. 家庭代間衝突的情況（如隔代教養）？</label>
+                    <select id="q22" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度 (冷漠)</option>
+                        <option value="medium">中度 (不相往來)</option>
+                        <option value="high">高度 (仇恨)</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q23. 居家設施對照顧是否有支持不足的部分？</label>
+                    <select id="q23" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度</option>
+                        <option value="medium">中度</option>
+                        <option value="high">高度</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q24. 是否需定期復健或醫療介入的頻率？</label>
+                    <select id="q24" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度 (頻率低)</option>
+                        <option value="medium">中度 (每週)</option>
+                        <option value="high">高度 (一週三次以上)</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q25. 是否需備用照顧人力或替班？</label>
+                    <select id="q25" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度 (照護需求低)</option>
+                        <option value="medium">中度 (短期可以無照顧)</option>
+                        <option value="high">高度 (完全不能離開照顧)</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q26. 是否有長照2.0相關補助使用？</label>
+                    <select id="q26" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度</option>
+                        <option value="medium">中度</option>
+                        <option value="high">高度</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q27. 是否需要明確照顧計畫與文件？</label>
+                    <select id="q27" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度</option>
+                        <option value="medium">中度</option>
+                        <option value="high">高度</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q28. 是否曾涉及法律相關事件（如監護、訴訟等）？</label>
+                    <select id="q28" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度 (證人身份)</option>
+                        <option value="medium">中度 (自己-民事)</option>
+                        <option value="high">高度 (自己-刑事)</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q29. 是否具宗教或文化照護特別需求？</label>
+                    <select id="q29" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度</option>
+                        <option value="medium">中度</option>
+                        <option value="high">高度</option>
+                    </select>
+                </div>
+
+                <div class="bg-slate-50 p-4 rounded-md">
+                    <label class="block text-sm font-medium text-slate-900 mb-2">Q30. 個案是否有對照顧人員提出不實指控紀錄？</label>
+                    <select id="q30" onchange="calculateScore()" class="w-full p-2 border border-slate-300 rounded-md bg-white">
+                        <option value="">請選擇程度</option>
+                        <option value="low">低度 (曾經)</option>
+                        <option value="medium">中度 (偶爾)</option>
+                        <option value="high">高度 (常態)</option>
+                    </select>
+                </div>                
+             
                 </div>
 
             </div>
