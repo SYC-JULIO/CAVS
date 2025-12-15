@@ -1,10 +1,10 @@
 import { QuestionConfig, ServiceItem } from './types';
 
 export const DIMENSION_NAMES = [
-  '身體照顧負荷',
-  '家庭溝通與資源',
-  '精神行為風險',
-  '照顧管理與安全'
+  '照顧模式的複雜度', // 原：身體照顧負荷
+  '家庭溝通成本',     // 原：家庭溝通與資源
+  '衝突與風險管理',   // 原：精神行為風險
+  '後續維運成本'      // 原：照顧管理與安全
 ];
 
 export const SERVICES_CATALOG: ServiceItem[] = [
@@ -55,13 +55,13 @@ export const QUESTIONS: QuestionConfig[] = [
   { id: 14, text: '對於他人攻擊行為的強度？', weights: { low: [1,0,0,1], medium: [3,1,4,2], high: [5,2,6,3] } },
   { id: 15, text: '常態性管路照護（導尿管、胃造口）的強度？', weights: { low: [2,0,0,1], medium: [4,0,0,2], high: [6,0,1,4] } },
   { id: 16, text: '跨系統轉介或社工長期介入的強度？', weights: { low: [0,1,0,1], medium: [1,2,1,2], high: [2,4,2,3] } },
-  { id: 17, text: '目前居住環境是否有增加輔助的需求？', weights: { low: [1,0,0,0], medium: [2,1,1,1], high: [3,1,2,2] } },
+  { id: 17, text: '抗拒參與集體活動的程度？', weights: { low: [0,1,0,0], medium: [2,2,0,1], high: [3,3,1,2] } },
   { id: 18, text: '家庭的經濟負擔與壓力程度？', weights: { low: [0,1,0,1], medium: [1,2,1,2], high: [2,3,2,3] } },
   { id: 19, text: '是否曾與照服或醫護產生糾紛？', weights: { low: [0,1,1,0], medium: [1,2,2,1], high: [2,4,3,2] } },
   { id: 20, text: '是否有自傷或自殺傾向歷史？', weights: { low: [0,0,1,1], medium: [2,0,2,1], high: [3,1,5,3] } },
   { id: 21, text: '原同住家屬分屬不同城市或國家？', weights: { low: [0,1,0,0], medium: [1,3,1,2], high: [1,5,2,3] } },
   { id: 22, text: '家庭代間衝突的情況（如隔代教養）？', weights: { low: [0,1,1,0], medium: [1,2,2,1], high: [2,4,3,2] } },
-  { id: 23, text: '居家設施對照顧是否有支持不足的部分？', weights: { low: [0,0,0,1], medium: [1,0,1,2], high: [2,0,2,3] } },
+  { id: 23, text: '需要個人化輔助設備程度？', weights: { low: [1,1,0,1], medium: [3,2,1,2], high: [5,2,2,5] } },
   { id: 24, text: '是否需定期復健或醫療介入的頻率？', weights: { low: [1,0,0,0], medium: [2,0,0,2], high: [3,0,1,3] } },
   { id: 25, text: '是否需備用照顧人力或替班？', weights: { low: [0,1,0,0], medium: [1,2,1,1], high: [2,4,2,3] } },
   { id: 26, text: '是否有長照2.0相關補助使用？', weights: { low: [0,0,0,0], medium: [1,1,1,1], high: [2,2,1,2] } },

@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Bot, FileText, Printer, Copy, Check } from 'lucide-react';
-import { AssessmentData } from '../types';
+import { Bot, FileText, Printer, Copy, Check, Download, Table } from 'lucide-react';
+import { AssessmentData, SelectedService } from '../types';
 import { RadarChart } from './RadarChart';
 import { ServiceCalculator } from './ServiceCalculator';
+import { SERVICES_CATALOG, DIMENSION_NAMES } from '../constants';
 
 interface Props {
   report: string | null;
@@ -13,6 +14,36 @@ interface Props {
 
 export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
   const [copied, setCopied] = useState(false);
+  const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
+
+  // Effect to initialize recommended services when data changes (logic moved from ServiceCalculator)
+  useEffect(() => {
+    const scores = [
+      data.dimensions.physical,
+      data.dimensions.family,
+      data.dimensions.mental,
+      data.dimensions.management
+    ];
+    
+    // Determine active dimensions (score > 10 is Yellow/Red)
+    const activeDimIndices = scores
+      .map((score, idx) => score > 10 ? idx : -1)
+      .filter(idx => idx !== -1);
+
+    const initialServices = SERVICES_CATALOG
+      .filter(service => service.recommendedFor.some(dimIdx => activeDimIndices.includes(dimIdx)))
+      // Exclude Service Packages (pkg1, pkg2, pkg3) from auto-selection
+      .filter(service => !['pkg1', 'pkg2', 'pkg3'].includes(service.id))
+      .map(service => ({
+        ...service,
+        dailyFreq: service.defaultQuantity,
+        monthlyDays: 30 // Default full month
+      }));
+      
+    // Remove duplicates
+    const uniqueServices = Array.from(new Map(initialServices.map(item => [item.id, item])).values());
+    setSelectedServices(uniqueServices);
+  }, [data.dimensions]); // Dependency on dimensions
 
   if (isLoading) {
     return (
@@ -41,23 +72,27 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
   }
 
   const handleCopyNotion = () => {
-    // Basic Markdown format that pastes well into Notion
+    // Enhanced Markdown format for Notion
     const content = `
 # 住戶評估報告: ${data.personalDetails.name}
 
-**基本資料**
-- 性別: ${data.personalDetails.gender}
-- 年齡: ${data.personalDetails.age}
-- 總分: ${data.totalScore} (${data.riskLevel})
+> 生成時間: ${new Date().toLocaleDateString()}
+> 總體風險: ${data.totalScore} 分 (${data.riskLevel})
 
-**四面向得分**
-- 身體照顧: ${data.dimensions.physical}
-- 家庭溝通: ${data.dimensions.family}
-- 精神行為: ${data.dimensions.mental}
-- 照顧管理: ${data.dimensions.management}
+### 基本資料
+| 項目 | 內容 |
+| --- | --- |
+| 性別 | ${data.personalDetails.gender} |
+| 年齡 | ${data.personalDetails.age} |
+
+### 四大面向得分
+1. **${DIMENSION_NAMES[0]}**: ${data.dimensions.physical} 分
+2. **${DIMENSION_NAMES[1]}**: ${data.dimensions.family} 分
+3. **${DIMENSION_NAMES[2]}**: ${data.dimensions.mental} 分
+4. **${DIMENSION_NAMES[3]}**: ${data.dimensions.management} 分
 
 ---
-**AI 建議報告**
+### AI 建議報告
 
 ${report}
     `;
@@ -67,18 +102,82 @@ ${report}
     });
   };
 
+  const handleExportCSV = () => {
+    // 1. Prepare Data
+    // Calculate total cost
+    let monthlyTotal = 0;
+    const servicesList = selectedServices.map(s => {
+        let cost = 0;
+        if (s.calculationBasis === 'per_month') {
+            const dailyUnitPrice = s.unit === '月' ? s.price / 30 : s.price;
+            cost = dailyUnitPrice * s.dailyFreq * s.monthlyDays;
+        } else {
+            cost = s.price * s.dailyFreq * s.monthlyDays;
+        }
+        monthlyTotal += cost;
+        return `${s.name}(${s.dailyFreq}${s.unit}/日, ${s.monthlyDays}天)`;
+    }).join('; ');
+
+    const headers = [
+        '姓名', '性別', '年齡', '總分', '風險等級',
+        DIMENSION_NAMES[0], DIMENSION_NAMES[1], DIMENSION_NAMES[2], DIMENSION_NAMES[3],
+        '加值服務清單', '預估月費'
+    ];
+
+    const row = [
+        data.personalDetails.name,
+        data.personalDetails.gender,
+        data.personalDetails.age,
+        data.totalScore,
+        data.riskLevel,
+        data.dimensions.physical,
+        data.dimensions.family,
+        data.dimensions.mental,
+        data.dimensions.management,
+        `"${servicesList}"`, // Quote to handle commas/semicolons
+        monthlyTotal
+    ];
+
+    // 2. Generate CSV Content with BOM for Excel UTF-8 support
+    const csvContent = "\uFEFF" + [
+        headers.join(','),
+        row.join(',')
+    ].join('\n');
+
+    // 3. Trigger Download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `評估報告_${data.personalDetails.name}_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
-    <div className="max-w-none relative">
+    <div className="max-w-none relative pb-10">
       
       {/* Action Buttons */}
-      <div className="absolute top-[-4rem] right-0 flex gap-2 print:hidden">
+      <div className="flex justify-end gap-2 mb-4 print:hidden">
          <button 
            onClick={handleCopyNotion}
            className="flex items-center text-sm bg-white border border-slate-200 px-3 py-1.5 rounded hover:bg-slate-50 text-slate-600 transition-colors"
+           title="複製內容以貼入 Notion"
          >
            {copied ? <Check className="w-4 h-4 mr-1 text-green-600" /> : <Copy className="w-4 h-4 mr-1" />}
-           {copied ? '已複製' : '複製為 Notion 格式'}
+           {copied ? '已複製' : 'Notion'}
          </button>
+         
+         <button 
+            onClick={handleExportCSV}
+            className="flex items-center text-sm bg-white border border-slate-200 px-3 py-1.5 rounded hover:bg-slate-50 text-slate-600 transition-colors"
+            title="匯出為 Excel 可讀格式 (.csv)"
+         >
+            <Table className="w-4 h-4 mr-1 text-green-700" />
+            匯出試算表
+         </button>
+
          <button 
             onClick={() => window.print()} 
             className="flex items-center text-sm bg-teal-600 text-white px-3 py-1.5 rounded hover:bg-teal-700 transition-colors shadow-sm"
@@ -112,9 +211,14 @@ ${report}
         </ReactMarkdown>
       </div>
 
-      {/* Service Calculator */}
-      <ServiceCalculator data={data} />
+      {/* Service Calculator (Controlled Component) */}
+      <ServiceCalculator 
+         data={data} 
+         selectedServices={selectedServices}
+         onServicesChange={setSelectedServices}
+      />
 
+      {/* Footer Actions for Print view */}
       <div className="mt-12 pt-6 border-t border-slate-200 text-center print:mt-4 print:pt-4">
         <p className="text-xs text-slate-400 italic">
           本報告由 AI 輔助生成，僅供參考。實際護理計畫應由專業醫療團隊評估後執行。

@@ -1,51 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { AssessmentData, SelectedService } from '../types';
-import { SERVICES_CATALOG, DIMENSION_NAMES } from '../constants';
+import { SERVICES_CATALOG } from '../constants';
 import { Calculator, Plus, Minus, Trash2, ShoppingBag, Calendar } from 'lucide-react';
 
 interface Props {
   data: AssessmentData;
+  selectedServices: SelectedService[];
+  onServicesChange: (services: SelectedService[]) => void;
 }
 
-export const ServiceCalculator: React.FC<Props> = ({ data }) => {
-  const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
+export const ServiceCalculator: React.FC<Props> = ({ data, selectedServices, onServicesChange }) => {
   const [selectedAddId, setSelectedAddId] = useState<string>("");
-
-  // Initialize recommended items
-  useEffect(() => {
-    const scores = [
-      data.dimensions.physical,
-      data.dimensions.family,
-      data.dimensions.mental,
-      data.dimensions.management
-    ];
-    
-    // Determine active dimensions (score > 10 is Yellow/Red)
-    const activeDimIndices = scores
-      .map((score, idx) => score > 10 ? idx : -1)
-      .filter(idx => idx !== -1);
-
-    const initialServices = SERVICES_CATALOG
-      .filter(service => service.recommendedFor.some(dimIdx => activeDimIndices.includes(dimIdx)))
-      // Exclude Service Packages (pkg1, pkg2, pkg3) from auto-selection
-      .filter(service => !['pkg1', 'pkg2', 'pkg3'].includes(service.id))
-      .map(service => ({
-        ...service,
-        dailyFreq: service.defaultQuantity,
-        monthlyDays: 30 // Default full month
-      }));
-      
-    // Remove duplicates
-    const uniqueServices = Array.from(new Map(initialServices.map(item => [item.id, item])).values());
-    setSelectedServices(uniqueServices);
-  }, [data]);
 
   const addService = (id: string) => {
     if (!id) return;
     const serviceToAdd = SERVICES_CATALOG.find(s => s.id === id);
     if (serviceToAdd) {
       if (!selectedServices.find(s => s.id === id)) {
-        setSelectedServices(prev => [...prev, { 
+        onServicesChange([...selectedServices, { 
             ...serviceToAdd, 
             dailyFreq: serviceToAdd.defaultQuantity,
             monthlyDays: 30
@@ -56,11 +28,11 @@ export const ServiceCalculator: React.FC<Props> = ({ data }) => {
   };
 
   const removeService = (id: string) => {
-    setSelectedServices(prev => prev.filter(s => s.id !== id));
+    onServicesChange(selectedServices.filter(s => s.id !== id));
   };
 
   const updateDailyFreq = (id: string, delta: number) => {
-    setSelectedServices(prev => prev.map(s => {
+    onServicesChange(selectedServices.map(s => {
       if (s.id === id) {
         const newFreq = Math.max(1, s.dailyFreq + delta);
         return { ...s, dailyFreq: newFreq };
@@ -70,7 +42,7 @@ export const ServiceCalculator: React.FC<Props> = ({ data }) => {
   };
 
   const updateMonthlyDays = (id: string, delta: number) => {
-    setSelectedServices(prev => prev.map(s => {
+    onServicesChange(selectedServices.map(s => {
       if (s.id === id) {
         // Max 31 days
         const newDays = Math.max(1, Math.min(31, s.monthlyDays + delta));
@@ -117,7 +89,7 @@ export const ServiceCalculator: React.FC<Props> = ({ data }) => {
       </div>
       
       {/* Add New Service Dropdown (Moved to Top) */}
-      <div className="mb-4 flex gap-2">
+      <div className="mb-4 flex gap-2 print:hidden">
         <select 
           className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm text-slate-700 outline-none focus:ring-2 focus:ring-teal-500"
           value={selectedAddId}
@@ -166,23 +138,23 @@ export const ServiceCalculator: React.FC<Props> = ({ data }) => {
                         </div>
                     </div>
                 </div>
-                <button onClick={() => removeService(service.id)} className="text-slate-400 hover:text-red-500 p-1">
+                <button onClick={() => removeService(service.id)} className="text-slate-400 hover:text-red-500 p-1 print:hidden">
                     <Trash2 className="w-4 h-4" />
                 </button>
             </div>
 
             {/* Bottom Row: Controls */}
-            <div className="flex items-center justify-end gap-4 bg-slate-50 p-2 rounded">
+            <div className="flex items-center justify-end gap-4 bg-slate-50 p-2 rounded print:bg-transparent print:p-0">
                 
                 {/* Control 1: Daily Frequency / Quantity */}
                 <div className="flex flex-col items-center">
                     <span className="text-[10px] text-slate-500 mb-1">
                         {service.unit === '月' ? '數量(份)' : `每日${service.unit}`}
                     </span>
-                    <div className="flex items-center bg-white rounded border border-slate-300">
-                        <button onClick={() => updateDailyFreq(service.id, -1)} className="px-2 py-1 hover:bg-slate-100 text-slate-600 border-r"><Minus className="w-3 h-3" /></button>
+                    <div className="flex items-center bg-white rounded border border-slate-300 print:border-none">
+                        <button onClick={() => updateDailyFreq(service.id, -1)} className="px-2 py-1 hover:bg-slate-100 text-slate-600 border-r print:hidden"><Minus className="w-3 h-3" /></button>
                         <span className="w-8 text-center text-sm font-bold text-slate-800">{service.dailyFreq}</span>
-                        <button onClick={() => updateDailyFreq(service.id, 1)} className="px-2 py-1 hover:bg-slate-100 text-slate-600 border-l"><Plus className="w-3 h-3" /></button>
+                        <button onClick={() => updateDailyFreq(service.id, 1)} className="px-2 py-1 hover:bg-slate-100 text-slate-600 border-l print:hidden"><Plus className="w-3 h-3" /></button>
                     </div>
                 </div>
 
@@ -193,10 +165,10 @@ export const ServiceCalculator: React.FC<Props> = ({ data }) => {
                     <span className="text-[10px] text-slate-500 mb-1 flex items-center">
                         <Calendar className="w-3 h-3 mr-1"/>每月天數
                     </span>
-                    <div className="flex items-center bg-white rounded border border-slate-300">
-                        <button onClick={() => updateMonthlyDays(service.id, -1)} className="px-2 py-1 hover:bg-slate-100 text-slate-600 border-r"><Minus className="w-3 h-3" /></button>
+                    <div className="flex items-center bg-white rounded border border-slate-300 print:border-none">
+                        <button onClick={() => updateMonthlyDays(service.id, -1)} className="px-2 py-1 hover:bg-slate-100 text-slate-600 border-r print:hidden"><Minus className="w-3 h-3" /></button>
                         <span className="w-8 text-center text-sm font-bold text-slate-800">{service.monthlyDays}</span>
-                        <button onClick={() => updateMonthlyDays(service.id, 1)} className="px-2 py-1 hover:bg-slate-100 text-slate-600 border-l"><Plus className="w-3 h-3" /></button>
+                        <button onClick={() => updateMonthlyDays(service.id, 1)} className="px-2 py-1 hover:bg-slate-100 text-slate-600 border-l print:hidden"><Plus className="w-3 h-3" /></button>
                     </div>
                 </div>
 
