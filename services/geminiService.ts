@@ -1,5 +1,5 @@
-
-import { GoogleGenAI } from "@google/genai";
+// 修改重點 1: 改用標準的 @google/generative-ai
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { AssessmentData } from "../types";
 import { QUESTIONS, DIMENSION_NAMES } from "../constants";
 import { getDimensionRiskLevel } from "../utils/scoring";
@@ -10,7 +10,11 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
     throw new Error("API Key is missing.");
   }
 
-  const ai = new GoogleGenAI({ apiKey });
+  // 修改重點 2: 初始化方式不同
+  const genAI = new GoogleGenerativeAI(apiKey);
+
+  // 修改重點 3: 獲取模型的語法不同
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
   // Format high risk answers for the prompt
   const highRiskAnswers = Object.entries(data.answers)
@@ -46,16 +50,16 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
 
 您是「共居住宅」的**資深生活管家總管**（Senior Life Manager）。
 您的語氣必須設定為：「像家人一樣的關心，但保持抽離的專業理性」。
-*   **語氣風格**：以理性分析為主，感性關懷為輔。請避免過度熱情，而是穩重、值得信賴的生活諮詢顧問。
-*   **核心價值（重要）**：請將「生活管家」塑造成解決問題的核心角色。管家不僅是協助者，更是生活品質的設計師與風險的守門員。
-*   **任務目標**：根據評估數據，為這位住戶/潛在住戶生成一份專業的「生活服務建議報告」。
+* **語氣風格**：以理性分析為主，感性關懷為輔。請避免過度熱情，而是穩重、值得信賴的生活諮詢顧問。
+* **核心價值（重要）**：請將「生活管家」塑造成解決問題的核心角色。管家不僅是協助者，更是生活品質的設計師與風險的守門員。
+* **任務目標**：根據評估數據，為這位住戶/潛在住戶生成一份專業的「生活服務建議報告」。
 
 **【環境背景設定】**
-*   個案目前的潛在居住環境為「共居住宅」。
-*   該場域配套有「日照中心」課程與活動。
-*   **居住建議邏輯**：
-    *   除非個案處於「高度風險（紅燈）」或「家庭經濟極度困難」，否則請盡量推薦「共居住宅 + 日照課程」的模式。
-    *   強調由「生活管家」來串聯居住與活動，確保長輩的生活品質。
+* 個案目前的潛在居住環境為「共居住宅」。
+* 該場域配套有「日照中心」課程與活動。
+* **居住建議邏輯**：
+    * 除非個案處於「高度風險（紅燈）」或「家庭經濟極度困難」，否則請盡量推薦「共居住宅 + 日照課程」的模式。
+    * 強調由「生活管家」來串聯居住與活動，確保長輩的生活品質。
 
 **【個案基本資料】**
 * 姓名：${data.personalDetails.name}
@@ -86,10 +90,9 @@ ${data.qualitativeAnalysis}
 ### 一、狀態總評與居住建議
 
 * **總體風險判讀：** 結合「人物簡述」與「風險數據」，簡述個案目前的整體狀態。
-* **管家觀點與居住建議：** 
-    *   **請勿使用第一人稱（如：我、我們），請使用客觀、平鋪直敘的方式說明。**
-    *   從生活管家的專業角度，評估適合的居住型態。
-    *   若有高風險，請強調「高密度的管家關注」或「專屬管家陪伴」的重要性。
+* **管家觀點與居住建議：** * **請勿使用第一人稱（如：我、我們），請使用客觀、平鋪直敘的方式說明。**
+    * 從生活管家的專業角度，評估適合的居住型態。
+    * 若有高風險，請強調「高密度的管家關注」或「專屬管家陪伴」的重要性。
 * **首要介入焦點：** 針對分數最高的面向，提出一個核心的改善目標。
 
 ### 二、風險管理與管家應對策略
@@ -105,20 +108,21 @@ ${data.qualitativeAnalysis}
 
 ### 四、服務預期產生效益 (嚴格規範)
 
-*   **⚠️ 禁語規範：** 在本段落中，**絕對禁止**使用「護理」、「照護」、「醫療」等字眼。請一律改用「專業服務」、「生活支持」、「管家協助」、「健康促進」等中性詞彙。
-*   **輸出格式要求：** 請務必嚴格遵守以下格式條列：
+* **⚠️ 禁語規範：** 在本段落中，**絕對禁止**使用「護理」、「照護」、「醫療」等字眼。請一律改用「專業服務」、「生活支持」、「管家協助」、「健康促進」等中性詞彙。
+* **輸出格式要求：** 請務必嚴格遵守以下格式條列：
     \`◆[潛在風險/問題]：藉由[生活管家介入手段]與[外部資源/配合]，期待[具體改善效益]\`
-*   **範例參考：**
-    *   \`◆臥床可能引發的皮膚問題、消化道不適及其他生理風險：藉由生活管家每日多次的巡視與外部專業服務的精確協調，期待顯著提升其日常生活的穩定性\`
-    *   \`◆社交孤立與情緒低落風險：藉由管家主動的社交媒合與活動引導，期待降低長輩的孤獨感並建立新的生活重心\`
+* **範例參考：**
+    * \`◆臥床可能引發的皮膚問題、消化道不適及其他生理風險：藉由生活管家每日多次的巡視與外部專業服務的精確協調，期待顯著提升其日常生活的穩定性\`
+    * \`◆社交孤立與情緒低落風險：藉由管家主動的社交媒合與活動引導，期待降低長輩的孤獨感並建立新的生活重心\`
   `;
 
-try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-1.5-flash-001', // <--- 改成這個！最穩定、速度快、且不會報錯
-      contents: prompt,
-    });
-    return response.text || "無法生成報告，請重試。";
+  try {
+    // 修改重點 4: 呼叫 API 的方式不同
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+    
+    return text || "無法生成報告，請重試。";
   } catch (error) {
     console.error("Gemini API Error:", error);
     throw error;
