@@ -18,33 +18,31 @@ async function generateContentWithRetry(ai: GoogleGenAI, model: string, prompt: 
     });
     return response.text || "無法生成報告，請重試。";
   } catch (error: any) {
-    // 強化錯誤訊息擷取，確保能抓到 Google API 深層的錯誤資訊
+    // 強化錯誤訊息擷取
     let errorMessage = '';
     
-    // 嘗試從各種可能的結構中抓取訊息
     if (typeof error === 'string') {
         errorMessage = error;
     } else if (error instanceof Error) {
         errorMessage = error.message;
-        // 有些 SDK 錯誤詳情藏在 cause 或 response 中，轉字串以確保這資訊被捕捉
+        // 將詳細錯誤資訊附加在後面，以便前端判斷是 Daily 還是 Minute limit
         errorMessage += ' ' + JSON.stringify(error);
     } else {
         errorMessage = JSON.stringify(error);
     }
     
-    // 1. Check for Quota Exceeded (429 / Resource Exhausted)
-    // 確保大小寫都能抓到
+    // 1. Check for Quota Exceeded (429)
     const isQuotaExceeded = 
         errorMessage.includes('429') || 
         /quota/i.test(errorMessage) || 
         /resource_exhausted/i.test(errorMessage);
 
     if (isQuotaExceeded) {
-        // 直接拋出錯誤，不進行重試
-        throw new Error("QUOTA_EXCEEDED");
+        // 修改：不要拋出 generic error，而是拋出帶有原始訊息的錯誤，讓前端去分析是哪種 Quota
+        throw new Error(errorMessage);
     }
 
-    // 2. Check for Server Overloaded (503 / Unavailable)
+    // 2. Check for Server Overloaded (503)
     const isOverloaded = 
       errorMessage.includes('503') || 
       /overloaded/i.test(errorMessage) || 
@@ -63,27 +61,22 @@ async function generateContentWithRetry(ai: GoogleGenAI, model: string, prompt: 
 
 export const generateCareAdvice = async (data: AssessmentData): Promise<string> => {
   // 優先讀取 Vite 的環境變數 (Render部署時會用到)
-  // Fallback 到 process.env (舊式環境)
   let apiKey = '';
   
   try {
-    // @ts-ignore - import.meta is a valid property in Vite environments
+    // @ts-ignore
     if (typeof import.meta !== 'undefined' && import.meta.env) {
       // @ts-ignore
       apiKey = import.meta.env.VITE_API_KEY || '';
     }
-  } catch (e) {
-    // Ignore error
-  }
+  } catch (e) { }
 
   if (!apiKey) {
     try {
         if (typeof process !== 'undefined' && process.env) {
             apiKey = process.env.API_KEY || process.env.REACT_APP_API_KEY || '';
         }
-    } catch (e) {
-        // Ignore error
-    }
+    } catch (e) { }
   }
 
   if (!apiKey) {
@@ -191,8 +184,8 @@ ${data.qualitativeAnalysis}
   `;
 
   try {
-    // Use the retry wrapper instead of direct call
-    return await generateContentWithRetry(ai, 'gemini-2.5-flash', prompt);
+    // 改用 gemini-1.5-flash，因為 gemini-2.5-flash 的免費額度太低 (20 RPD)
+    return await generateContentWithRetry(ai, 'gemini-1.5-flash', prompt);
   } catch (error) {
     console.error("Gemini API Error:", error);
     throw error;

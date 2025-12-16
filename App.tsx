@@ -21,11 +21,13 @@ const App: React.FC = () => {
   const [report, setReport] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorDetail, setErrorDetail] = useState<string | null>(null); // New state for raw error
   const [isQuotaError, setIsQuotaError] = useState(false);
 
   const handleGenerate = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    setErrorDetail(null);
     setIsQuotaError(false);
     setReport(null);
     
@@ -36,11 +38,22 @@ const App: React.FC = () => {
       console.error(err);
       
       let errorMessage = err.message || '生成報告時發生未知錯誤';
-      
-      // Handle the specific QUOTA_EXCEEDED error thrown by our service
-      if (errorMessage === 'QUOTA_EXCEEDED' || errorMessage.includes('429')) {
+
+      // Parse specific error types
+      if (errorMessage.includes('429') || /quota/i.test(errorMessage) || /resource_exhausted/i.test(errorMessage)) {
         setIsQuotaError(true);
-        setError('目前使用人數較多，已達到 AI 模型的免費額度上限。請喝杯水休息一下，建議等待約 60 秒後再重新點擊生成。');
+        
+        // Check for specific limits in the error message
+        if (errorMessage.includes('limit: 20') || errorMessage.includes('free_tier_requests')) {
+             setError('已達每分鐘頻率上限 (RPM)。請等待約 1~2 分鐘，讓系統冷卻後再試。');
+        } else if (errorMessage.includes('limit: 1500')) {
+             setError('已達每日使用上限 (RPD)。今日額度已用完，請明日再試。');
+        } else {
+             setError('目前使用人數較多，達到 AI 額度上限。請稍後再試。');
+        }
+        
+        // Save raw error for debugging display
+        setErrorDetail(errorMessage);
         return;
       }
 
@@ -142,6 +155,11 @@ const App: React.FC = () => {
                         <p className="text-slate-600 font-medium">
                           {error}
                         </p>
+                        {errorDetail && (
+                          <div className="mt-4 p-3 bg-slate-100 rounded text-left overflow-x-auto">
+                             <p className="text-xs text-slate-400 font-mono break-all">{errorDetail}</p>
+                          </div>
+                        )}
                      </div>
                    </div>
                  ) : (
