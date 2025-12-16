@@ -4,8 +4,10 @@ import { AssessmentData } from "../types";
 import { QUESTIONS, DIMENSION_NAMES } from "../constants";
 import { getDimensionRiskLevel } from "../utils/scoring";
 
-const MAX_RETRIES = 3;
-const RETRY_DELAY_MS = 2000;
+// 修改：將重試次數降為 1，避免免費版額度瞬間耗盡
+const MAX_RETRIES = 1; 
+// 修改：延長重試等待時間
+const RETRY_DELAY_MS = 3500;
 
 // Helper function to handle retries for overloaded models
 async function generateContentWithRetry(ai: GoogleGenAI, model: string, prompt: string, retries = 0): Promise<string> {
@@ -16,17 +18,41 @@ async function generateContentWithRetry(ai: GoogleGenAI, model: string, prompt: 
     });
     return response.text || "無法生成報告，請重試。";
   } catch (error: any) {
-    // Detect 503 Overloaded or similar transient errors
-    const errorMessage = error.message || JSON.stringify(error);
+    // 強化錯誤訊息擷取，確保能抓到 Google API 深層的錯誤資訊
+    let errorMessage = '';
+    
+    // 嘗試從各種可能的結構中抓取訊息
+    if (typeof error === 'string') {
+        errorMessage = error;
+    } else if (error instanceof Error) {
+        errorMessage = error.message;
+        // 有些 SDK 錯誤詳情藏在 cause 或 response 中，轉字串以確保這資訊被捕捉
+        errorMessage += ' ' + JSON.stringify(error);
+    } else {
+        errorMessage = JSON.stringify(error);
+    }
+    
+    // 1. Check for Quota Exceeded (429 / Resource Exhausted)
+    // 確保大小寫都能抓到
+    const isQuotaExceeded = 
+        errorMessage.includes('429') || 
+        /quota/i.test(errorMessage) || 
+        /resource_exhausted/i.test(errorMessage);
+
+    if (isQuotaExceeded) {
+        // 直接拋出錯誤，不進行重試
+        throw new Error("QUOTA_EXCEEDED");
+    }
+
+    // 2. Check for Server Overloaded (503 / Unavailable)
     const isOverloaded = 
       errorMessage.includes('503') || 
-      errorMessage.includes('overloaded') || 
-      errorMessage.includes('UNAVAILABLE');
+      /overloaded/i.test(errorMessage) || 
+      /unavailable/i.test(errorMessage);
 
     if (isOverloaded && retries < MAX_RETRIES) {
       console.warn(`Model overloaded (503). Retrying... (${retries + 1}/${MAX_RETRIES})`);
-      // Exponential backoff: 2s, 4s, 8s
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * Math.pow(2, retries)));
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
       return generateContentWithRetry(ai, model, prompt, retries + 1);
     }
     
@@ -92,9 +118,6 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
   const highestDimIndex = dims.indexOf(Math.max(...dims));
   const highestDimName = DIMENSION_NAMES[highestDimIndex];
   
-  // Check Q18 for financial stress (High risk on Q18 means "入不敷出")
-  const isFinancialStressHigh = data.answers[18] === 'high';
-
   const prompt = `
 **【角色與任務設定】**
 

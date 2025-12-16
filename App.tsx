@@ -4,7 +4,7 @@ import { AssessmentForm } from './components/AssessmentForm';
 import { ReportViewer } from './components/ReportViewer';
 import { generateCareAdvice } from './services/geminiService';
 import { AssessmentData } from './types';
-import { Activity, ClipboardList, AlertCircle, FileBarChart } from 'lucide-react';
+import { Activity, ClipboardList, AlertCircle, FileBarChart, Clock } from 'lucide-react';
 
 const INITIAL_DATA: AssessmentData = {
   personalDetails: { name: '', gender: '', age: '', contact: '' },
@@ -21,10 +21,12 @@ const App: React.FC = () => {
   const [report, setReport] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isQuotaError, setIsQuotaError] = useState(false);
 
   const handleGenerate = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    setIsQuotaError(false);
     setReport(null);
     
     try {
@@ -33,10 +35,17 @@ const App: React.FC = () => {
     } catch (err: any) {
       console.error(err);
       
-      // Attempt to parse cleaner error message from JSON string
       let errorMessage = err.message || '生成報告時發生未知錯誤';
+      
+      // Handle the specific QUOTA_EXCEEDED error thrown by our service
+      if (errorMessage === 'QUOTA_EXCEEDED' || errorMessage.includes('429')) {
+        setIsQuotaError(true);
+        setError('目前使用人數較多，已達到 AI 模型的免費額度上限。請喝杯水休息一下，建議等待約 60 秒後再重新點擊生成。');
+        return;
+      }
+
+      // JSON parsing logic for other errors
       try {
-         // If error message looks like JSON (e.g. "{\"error\":...}"), try to parse it
          if (typeof errorMessage === 'string' && errorMessage.trim().startsWith('{')) {
             const errorObj = JSON.parse(errorMessage);
             if (errorObj.error && errorObj.error.message) {
@@ -49,7 +58,7 @@ const App: React.FC = () => {
          // If parsing fails, use the original string
       }
 
-      // Friendly mapping for common errors
+      // Friendly mapping
       if (errorMessage.includes('overloaded') || errorMessage.includes('503')) {
           setError('AI 模型目前負載過高 (503 Overloaded)，系統已自動重試但仍忙碌。請稍待片刻後再次點擊生成按鈕。');
       } else if (errorMessage.includes('API key not valid') || errorMessage.includes('API_KEY')) {
@@ -119,9 +128,21 @@ const App: React.FC = () => {
                
                <div className="flex-1 p-8 overflow-y-auto max-h-[calc(100vh-200px)]">
                  {error ? (
-                   <div className="flex flex-col items-center justify-center h-full text-red-500 space-y-4 p-4 text-center">
-                     <AlertCircle className="w-12 h-12 flex-shrink-0" />
-                     <p className="font-medium max-w-md">{error}</p>
+                   <div className="flex flex-col items-center justify-center h-full text-center space-y-4 p-4">
+                     {isQuotaError ? (
+                       <Clock className="w-12 h-12 text-yellow-500 flex-shrink-0" />
+                     ) : (
+                       <AlertCircle className="w-12 h-12 text-red-500 flex-shrink-0" />
+                     )}
+                     
+                     <div className="max-w-md">
+                        <p className={`font-bold text-lg mb-2 ${isQuotaError ? 'text-slate-800' : 'text-red-600'}`}>
+                           {isQuotaError ? 'AI 正在休息中 (額度緩衝)' : '發生錯誤'}
+                        </p>
+                        <p className="text-slate-600 font-medium">
+                          {error}
+                        </p>
+                     </div>
                    </div>
                  ) : (
                    <ReportViewer report={report} isLoading={isLoading} data={data} />
