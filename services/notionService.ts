@@ -3,8 +3,8 @@ import { AssessmentData } from "../types";
 import { DIMENSION_NAMES } from "../constants";
 
 // Security update: Read from environment variables
-const apiKey = import.meta.env.VITE_NOTION_API_KEY;
-const dbId = import.meta.env.VITE_NOTION_DATABASE_ID;
+const NOTION_API_KEY = process.env.NOTION_API_KEY;
+const NOTION_DATABASE_ID = process.env.NOTION_DATABASE_ID;
 
 // Helper to sanitize text for Notion (limit 2000 chars)
 const truncate = (str: string, length: number = 2000) => {

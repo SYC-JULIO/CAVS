@@ -148,6 +148,11 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
     document.body.removeChild(link);
   };
 
+  const getTodayDate = () => {
+    const today = new Date();
+    return `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}`;
+  };
+
   return (
     <div className="max-w-none relative pb-10">
       
@@ -227,7 +232,7 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
       {/* Footer Actions for Print view */}
       <div className="mt-12 pt-6 border-t border-slate-200 text-center print:mt-4 print:pt-4">
         <p className="text-xs text-slate-400 italic">
-          本報告由 AI 輔助生成，僅供參考。實際護理計畫應由專業醫療團隊評估後執行。
+          評估時間：{getTodayDate()}
         </p>
       </div>
     </div>
