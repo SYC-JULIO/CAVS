@@ -1,10 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Bot, FileText, Printer, Copy, Check, Download, Table } from 'lucide-react';
+import { Bot, FileText, Printer, Save, Check, Download, Table, CloudLightning } from 'lucide-react';
 import { AssessmentData, SelectedService } from '../types';
 import { RadarChart } from './RadarChart';
 import { ServiceCalculator } from './ServiceCalculator';
 import { SERVICES_CATALOG, DIMENSION_NAMES } from '../constants';
+import { saveToNotion } from '../services/notionService';
 
 interface Props {
   report: string | null;
@@ -13,7 +15,7 @@ interface Props {
 }
 
 export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
-  const [copied, setCopied] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
 
   // Effect to initialize recommended services when data changes (logic moved from ServiceCalculator)
@@ -41,7 +43,15 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
       }));
       
     // Remove duplicates
-    const uniqueServices = Array.from(new Map(initialServices.map(item => [item.id, item])).values());
+    let uniqueServices = Array.from(new Map(initialServices.map(item => [item.id, item])).values());
+    
+    // Mutual Exclusion: s_meal vs s_meal_single
+    // If both are present, prioritize s_meal (Daily) and remove s_meal_single
+    const hasMeal = uniqueServices.some(s => s.id === 's_meal');
+    if (hasMeal) {
+        uniqueServices = uniqueServices.filter(s => s.id !== 's_meal_single');
+    }
+
     setSelectedServices(uniqueServices);
   }, [data.dimensions]); // Dependency on dimensions
 
@@ -71,35 +81,18 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
     );
   }
 
-  const handleCopyNotion = () => {
-    // Enhanced Markdown format for Notion
-    const content = `
-# 住戶評估報告: ${data.personalDetails.name}
-
-> 生成時間: ${new Date().toLocaleDateString()}
-> 總體風險: ${data.totalScore} 分 (${data.riskLevel})
-
-### 基本資料
-| 項目 | 內容 |
-| --- | --- |
-| 性別 | ${data.personalDetails.gender} |
-| 年齡 | ${data.personalDetails.age} |
-
-### 四大面向得分
-1. **${DIMENSION_NAMES[0]}**: ${data.dimensions.physical} 分
-2. **${DIMENSION_NAMES[1]}**: ${data.dimensions.family} 分
-3. **${DIMENSION_NAMES[2]}**: ${data.dimensions.mental} 分
-4. **${DIMENSION_NAMES[3]}**: ${data.dimensions.management} 分
-
----
-### AI 建議報告
-
-${report}
-    `;
-    navigator.clipboard.writeText(content).then(() => {
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    });
+  const handleSaveToNotion = async () => {
+    if (!report) return;
+    setSaveStatus('saving');
+    try {
+        await saveToNotion(data, report);
+        setSaveStatus('success');
+        setTimeout(() => setSaveStatus('idle'), 3000);
+    } catch (error) {
+        console.error(error);
+        alert("儲存至 Notion 失敗。請檢查您的網路連線，或確認是否受到瀏覽器 CORS 限制 (建議使用 CORS 擴充套件或於後端環境執行)。");
+        setSaveStatus('error');
+    }
   };
 
   const handleExportCSV = () => {
@@ -161,12 +154,25 @@ ${report}
       {/* Action Buttons */}
       <div className="flex justify-end gap-2 mb-4 print:hidden">
          <button 
-           onClick={handleCopyNotion}
-           className="flex items-center text-sm bg-white border border-slate-200 px-3 py-1.5 rounded hover:bg-slate-50 text-slate-600 transition-colors"
-           title="複製內容以貼入 Notion"
+           onClick={handleSaveToNotion}
+           disabled={saveStatus === 'saving'}
+           className={`flex items-center text-sm px-3 py-1.5 rounded transition-colors border shadow-sm
+             ${saveStatus === 'success' 
+                ? 'bg-green-50 border-green-200 text-green-700' 
+                : saveStatus === 'error'
+                ? 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'
+             }`}
+           title="將資料與報告存入 Notion 資料庫"
          >
-           {copied ? <Check className="w-4 h-4 mr-1 text-green-600" /> : <Copy className="w-4 h-4 mr-1" />}
-           {copied ? '已複製' : 'Notion'}
+           {saveStatus === 'saving' ? (
+             <CloudLightning className="w-4 h-4 mr-1 animate-pulse" />
+           ) : saveStatus === 'success' ? (
+             <Check className="w-4 h-4 mr-1" />
+           ) : (
+             <Save className="w-4 h-4 mr-1" />
+           )}
+           {saveStatus === 'saving' ? '儲存中...' : saveStatus === 'success' ? '已儲存' : '儲存至 Notion'}
          </button>
          
          <button 
@@ -193,7 +199,7 @@ ${report}
       <div className="prose prose-slate prose-headings:text-teal-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700 max-w-none">
         <div className="flex items-center space-x-2 mb-6 pb-4 border-b border-slate-100">
           <Bot className="w-5 h-5 text-teal-600" />
-          <span className="text-xs font-semibold text-teal-600 uppercase tracking-wider">AI Generated Assessment</span>
+          <span className="text-xs font-semibold text-teal-600 uppercase tracking-wider">決策支援小助手</span>
         </div>
         
         <ReactMarkdown

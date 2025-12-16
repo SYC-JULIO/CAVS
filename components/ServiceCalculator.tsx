@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { AssessmentData, SelectedService } from '../types';
 import { SERVICES_CATALOG } from '../constants';
@@ -17,7 +18,16 @@ export const ServiceCalculator: React.FC<Props> = ({ data, selectedServices, onS
     const serviceToAdd = SERVICES_CATALOG.find(s => s.id === id);
     if (serviceToAdd) {
       if (!selectedServices.find(s => s.id === id)) {
-        onServicesChange([...selectedServices, { 
+        let newServices = [...selectedServices];
+
+        // Mutual exclusion logic for Meal services
+        if (id === 's_meal') {
+            newServices = newServices.filter(s => s.id !== 's_meal_single');
+        } else if (id === 's_meal_single') {
+            newServices = newServices.filter(s => s.id !== 's_meal');
+        }
+
+        onServicesChange([...newServices, { 
             ...serviceToAdd, 
             dailyFreq: serviceToAdd.defaultQuantity,
             monthlyDays: 30
