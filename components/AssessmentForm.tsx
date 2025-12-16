@@ -1,8 +1,9 @@
+
 import React, { useEffect } from 'react';
 import { AssessmentData } from '../types';
 import { QUESTIONS } from '../constants';
 import { calculateScores, getRiskColorClass } from '../utils/scoring';
-import { PlayCircle, User, Activity, MessageSquare } from 'lucide-react';
+import { PlayCircle, User, Activity, MessageSquare, FileText } from 'lucide-react';
 
 interface Props {
   data: AssessmentData;
@@ -120,9 +121,25 @@ export const AssessmentForm: React.FC<Props> = ({ data, onChange, onGenerate, is
         </div>
       </section>
 
-      {/* 2. Assessment Matrix */}
+      {/* 2. Person Brief (New Section) */}
+      <section className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+        <div className="flex items-center mb-2 text-teal-700">
+          <FileText className="w-5 h-5 mr-2" />
+          <h3 className="font-semibold">人物簡述與事件描述</h3>
+        </div>
+        <p className="text-xs text-slate-500 mb-3">請簡述個案背景、當前主要問題或近期發生的關鍵事件。</p>
+        <textarea
+          rows={3}
+          className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none transition-all"
+          value={data.personBrief}
+          onChange={(e) => onChange({...data, personBrief: e.target.value})}
+          placeholder="例如：王伯伯原本獨居，上週因在家浴室跌倒被鄰居發現，子女希望能安排有人看顧的環境..."
+        />
+      </section>
+
+      {/* 3. Assessment Matrix */}
       <section>
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between mb-4 mt-6">
            <div className="flex items-center text-teal-700">
             <Activity className="w-5 h-5 mr-2" />
             <h3 className="font-semibold">評估量表 (30題)</h3>
@@ -137,27 +154,27 @@ export const AssessmentForm: React.FC<Props> = ({ data, onChange, onGenerate, is
               <div className="grid grid-cols-4 gap-2">
                 <button
                   onClick={() => handleAnswerChange(q.id, '')}
-                  className={`text-xs py-2 px-1 rounded border ${!data.answers[q.id] ? 'bg-slate-100 border-slate-400 text-slate-600 font-bold' : 'border-slate-200 text-slate-400 hover:bg-slate-50'}`}
+                  className={`text-xs py-2 px-1 rounded border h-full flex items-center justify-center ${!data.answers[q.id] ? 'bg-slate-100 border-slate-400 text-slate-600 font-bold' : 'border-slate-200 text-slate-400 hover:bg-slate-50'}`}
                 >
                   無/未選 (0)
                 </button>
                 <button
                   onClick={() => handleAnswerChange(q.id, 'low')}
-                  className={`text-xs py-2 px-1 rounded border ${data.answers[q.id] === 'low' ? 'bg-green-100 border-green-500 text-green-700 font-bold' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                  className={`text-xs py-2 px-1 rounded border h-full flex items-center justify-center text-center ${data.answers[q.id] === 'low' ? 'bg-green-100 border-green-500 text-green-700 font-bold' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
                 >
-                  低度
+                  {q.options.low}
                 </button>
                 <button
                   onClick={() => handleAnswerChange(q.id, 'medium')}
-                  className={`text-xs py-2 px-1 rounded border ${data.answers[q.id] === 'medium' ? 'bg-yellow-100 border-yellow-500 text-yellow-700 font-bold' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                  className={`text-xs py-2 px-1 rounded border h-full flex items-center justify-center text-center ${data.answers[q.id] === 'medium' ? 'bg-yellow-100 border-yellow-500 text-yellow-700 font-bold' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
                 >
-                  中度
+                  {q.options.medium}
                 </button>
                 <button
                   onClick={() => handleAnswerChange(q.id, 'high')}
-                  className={`text-xs py-2 px-1 rounded border ${data.answers[q.id] === 'high' ? 'bg-red-100 border-red-500 text-red-700 font-bold' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+                  className={`text-xs py-2 px-1 rounded border h-full flex items-center justify-center text-center ${data.answers[q.id] === 'high' ? 'bg-red-100 border-red-500 text-red-700 font-bold' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
                 >
-                  高度
+                  {q.options.high}
                 </button>
               </div>
             </div>
@@ -165,7 +182,7 @@ export const AssessmentForm: React.FC<Props> = ({ data, onChange, onGenerate, is
         </div>
       </section>
 
-      {/* 3. Qualitative Input */}
+      {/* 4. Qualitative Input */}
       <section>
         <div className="flex items-center mb-2 text-teal-700">
           <MessageSquare className="w-5 h-5 mr-2" />

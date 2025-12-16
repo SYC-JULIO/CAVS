@@ -1,3 +1,4 @@
+
 export type RiskLevelType = 'Green' | 'Yellow' | 'Red';
 
 export interface PersonalDetails {
@@ -15,6 +16,11 @@ export interface QuestionConfig {
     medium: [number, number, number, number];
     high: [number, number, number, number];
   };
+  options: {
+    low: string;
+    medium: string;
+    high: string;
+  };
 }
 
 export interface ServiceItem {
@@ -30,6 +36,7 @@ export interface ServiceItem {
 
 export interface AssessmentData {
   personalDetails: PersonalDetails;
+  personBrief: string; // 新增：人物簡述與事件描述
   answers: Record<number, 'low' | 'medium' | 'high' | null>; // Question ID -> Answer
   qualitativeAnalysis: string;
   

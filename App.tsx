@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { AssessmentForm } from './components/AssessmentForm';
 import { ReportViewer } from './components/ReportViewer';
@@ -7,6 +8,7 @@ import { Activity, ClipboardList, AlertCircle, FileBarChart } from 'lucide-react
 
 const INITIAL_DATA: AssessmentData = {
   personalDetails: { name: '', gender: '', age: '', contact: '' },
+  personBrief: '',
   answers: {},
   qualitativeAnalysis: '',
   dimensions: { physical: 0, family: 0, mental: 0, management: 0 },
@@ -67,7 +69,7 @@ const App: React.FC = () => {
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
                 <h2 className="text-lg font-semibold text-slate-800">1. 資料輸入與評估</h2>
-                <p className="text-sm text-slate-500">請填寫基本資料並完成30題風險評估</p>
+                <p className="text-sm text-slate-500">請填寫基本資料、人物簡述並完成30題風險評估</p>
               </div>
               <div className="p-6">
                 <AssessmentForm 
