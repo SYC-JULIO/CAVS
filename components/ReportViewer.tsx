@@ -1,12 +1,11 @@
 
 import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Bot, FileText, Printer, Save, Check, Download, Table, CloudLightning } from 'lucide-react';
+import { Bot, FileText, Printer, Copy, Check, Table } from 'lucide-react';
 import { AssessmentData, SelectedService } from '../types';
 import { RadarChart } from './RadarChart';
 import { ServiceCalculator } from './ServiceCalculator';
 import { SERVICES_CATALOG, DIMENSION_NAMES } from '../constants';
-import { saveToNotion } from '../services/notionService';
 
 interface Props {
   report: string | null;
@@ -15,7 +14,7 @@ interface Props {
 }
 
 export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
-  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
 
   // Effect to initialize recommended services when data changes (logic moved from ServiceCalculator)
@@ -81,17 +80,15 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
     );
   }
 
-  const handleSaveToNotion = async () => {
+  const handleCopyReport = async () => {
     if (!report) return;
-    setSaveStatus('saving');
     try {
-        await saveToNotion(data, report);
-        setSaveStatus('success');
-        setTimeout(() => setSaveStatus('idle'), 3000);
-    } catch (error) {
-        console.error(error);
-        alert("儲存至 Notion 失敗。請檢查您的網路連線，或確認是否受到瀏覽器 CORS 限制 (建議使用 CORS 擴充套件或於後端環境執行)。");
-        setSaveStatus('error');
+        await navigator.clipboard.writeText(report);
+        setCopyStatus('copied');
+        setTimeout(() => setCopyStatus('idle'), 2000);
+    } catch (err) {
+        console.error('Failed to copy', err);
+        alert('複製失敗，請手動選取文字複製。');
     }
   };
 
@@ -159,25 +156,20 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
       {/* Action Buttons */}
       <div className="flex justify-end gap-2 mb-4 print:hidden">
          <button 
-           onClick={handleSaveToNotion}
-           disabled={saveStatus === 'saving'}
+           onClick={handleCopyReport}
            className={`flex items-center text-sm px-3 py-1.5 rounded transition-colors border shadow-sm
-             ${saveStatus === 'success' 
+             ${copyStatus === 'copied' 
                 ? 'bg-green-50 border-green-200 text-green-700' 
-                : saveStatus === 'error'
-                ? 'bg-red-50 border-red-200 text-red-700'
                 : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'
              }`}
-           title="將資料與報告存入 Notion 資料庫"
+           title="複製報告內容 (Markdown 格式)，可直接貼上至 Notion"
          >
-           {saveStatus === 'saving' ? (
-             <CloudLightning className="w-4 h-4 mr-1 animate-pulse" />
-           ) : saveStatus === 'success' ? (
+           {copyStatus === 'copied' ? (
              <Check className="w-4 h-4 mr-1" />
            ) : (
-             <Save className="w-4 h-4 mr-1" />
+             <Copy className="w-4 h-4 mr-1" />
            )}
-           {saveStatus === 'saving' ? '儲存中...' : saveStatus === 'success' ? '已儲存' : '儲存至 Notion'}
+           {copyStatus === 'copied' ? '已複製' : '複製內容'}
          </button>
          
          <button 
