@@ -115,7 +115,7 @@ ${data.qualitativeAnalysis}
 
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-2.0-flash-exp',
       contents: prompt,
     });
     return response.text || "無法生成報告，請重試。";
