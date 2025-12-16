@@ -113,9 +113,9 @@ ${data.qualitativeAnalysis}
     *   \`◆社交孤立與情緒低落風險：藉由管家主動的社交媒合與活動引導，期待降低長輩的孤獨感並建立新的生活重心\`
   `;
 
-  try {
+try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-1.5-flash', // <--- 改成這個！最穩定、速度快、且不會報錯
       contents: prompt,
     });
     return response.text || "無法生成報告，請重試。";
