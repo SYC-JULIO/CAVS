@@ -32,9 +32,31 @@ const App: React.FC = () => {
       setReport(result);
     } catch (err: any) {
       console.error(err);
-      // Show the actual error message if available, otherwise show default
-      const errorMessage = err.message || '生成報告時發生未知錯誤';
-      setError(`錯誤：${errorMessage} (請檢查 API Key 設定或網路連線)`);
+      
+      // Attempt to parse cleaner error message from JSON string
+      let errorMessage = err.message || '生成報告時發生未知錯誤';
+      try {
+         // If error message looks like JSON (e.g. "{\"error\":...}"), try to parse it
+         if (typeof errorMessage === 'string' && errorMessage.trim().startsWith('{')) {
+            const errorObj = JSON.parse(errorMessage);
+            if (errorObj.error && errorObj.error.message) {
+                errorMessage = errorObj.error.message;
+            } else if (errorObj.message) {
+                errorMessage = errorObj.message;
+            }
+         }
+      } catch (e) {
+         // If parsing fails, use the original string
+      }
+
+      // Friendly mapping for common errors
+      if (errorMessage.includes('overloaded') || errorMessage.includes('503')) {
+          setError('AI 模型目前負載過高 (503 Overloaded)，系統已自動重試但仍忙碌。請稍待片刻後再次點擊生成按鈕。');
+      } else if (errorMessage.includes('API key not valid') || errorMessage.includes('API_KEY')) {
+          setError('API Key 設定無效。請確認您的 Render Environment Variables 是否正確設定 VITE_API_KEY。');
+      } else {
+          setError(`錯誤：${errorMessage} (請檢查 API Key 設定或網路連線)`);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -99,8 +121,7 @@ const App: React.FC = () => {
                  {error ? (
                    <div className="flex flex-col items-center justify-center h-full text-red-500 space-y-4 p-4 text-center">
                      <AlertCircle className="w-12 h-12 flex-shrink-0" />
-                     <p className="font-medium">{error}</p>
-                     <p className="text-xs text-slate-400">若為 API Key Missing，請確認系統環境變數。</p>
+                     <p className="font-medium max-w-md">{error}</p>
                    </div>
                  ) : (
                    <ReportViewer report={report} isLoading={isLoading} data={data} />

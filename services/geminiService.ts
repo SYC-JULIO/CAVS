@@ -4,6 +4,37 @@ import { AssessmentData } from "../types";
 import { QUESTIONS, DIMENSION_NAMES } from "../constants";
 import { getDimensionRiskLevel } from "../utils/scoring";
 
+const MAX_RETRIES = 3;
+const RETRY_DELAY_MS = 2000;
+
+// Helper function to handle retries for overloaded models
+async function generateContentWithRetry(ai: GoogleGenAI, model: string, prompt: string, retries = 0): Promise<string> {
+  try {
+    const response = await ai.models.generateContent({
+      model: model,
+      contents: prompt,
+    });
+    return response.text || "無法生成報告，請重試。";
+  } catch (error: any) {
+    // Detect 503 Overloaded or similar transient errors
+    const errorMessage = error.message || JSON.stringify(error);
+    const isOverloaded = 
+      errorMessage.includes('503') || 
+      errorMessage.includes('overloaded') || 
+      errorMessage.includes('UNAVAILABLE');
+
+    if (isOverloaded && retries < MAX_RETRIES) {
+      console.warn(`Model overloaded (503). Retrying... (${retries + 1}/${MAX_RETRIES})`);
+      // Exponential backoff: 2s, 4s, 8s
+      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS * Math.pow(2, retries)));
+      return generateContentWithRetry(ai, model, prompt, retries + 1);
+    }
+    
+    // If not retry-able or max retries reached, throw the error
+    throw error;
+  }
+}
+
 export const generateCareAdvice = async (data: AssessmentData): Promise<string> => {
   // 優先讀取 Vite 的環境變數 (Render部署時會用到)
   // Fallback 到 process.env (舊式環境)
@@ -137,11 +168,8 @@ ${data.qualitativeAnalysis}
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
-    });
-    return response.text || "無法生成報告，請重試。";
+    // Use the retry wrapper instead of direct call
+    return await generateContentWithRetry(ai, 'gemini-2.5-flash', prompt);
   } catch (error) {
     console.error("Gemini API Error:", error);
     throw error;
