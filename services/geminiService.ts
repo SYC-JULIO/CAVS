@@ -184,8 +184,10 @@ ${data.qualitativeAnalysis}
   `;
 
   try {
-    // 改用 gemini-1.5-flash，因為 gemini-2.5-flash 的免費額度太低 (20 RPD)
-    return await generateContentWithRetry(ai, 'gemini-1.5-flash', prompt);
+    // 改用 'gemini-1.5-flash-002'
+    // 1. 這是 1.5 系列的最新穩定版 (2024-09)，明確支援且穩定。
+    // 2. 它擁有高額度 (1500 RPD)，解決了 2.5 系列 (20 RPD) 額度不足的問題。
+    return await generateContentWithRetry(ai, 'gemini-1.5-flash-002', prompt);
   } catch (error) {
     console.error("Gemini API Error:", error);
     throw error;
