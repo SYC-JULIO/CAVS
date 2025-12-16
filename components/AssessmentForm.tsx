@@ -156,7 +156,7 @@ export const AssessmentForm: React.FC<Props> = ({ data, onChange, onGenerate, is
                   onClick={() => handleAnswerChange(q.id, '')}
                   className={`text-xs py-2 px-1 rounded border h-full flex items-center justify-center ${!data.answers[q.id] ? 'bg-slate-100 border-slate-400 text-slate-600 font-bold' : 'border-slate-200 text-slate-400 hover:bg-slate-50'}`}
                 >
-                  無/未選 (0)
+                  無/未選 
                 </button>
                 <button
                   onClick={() => handleAnswerChange(q.id, 'low')}
