@@ -44,6 +44,7 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
   // 3. 組合 Prompt (保留原本邏輯)
   const prompt = `
 **【角色與任務設定】**
+**【角色與任務設定】**
 
 您是「共居住宅」的**資深生活管家總管**（Senior Life Manager）。
 您的語氣必須設定為：「像家人一樣的關心，但保持抽離的專業理性」。
@@ -114,14 +115,52 @@ ${data.qualitativeAnalysis}
     *   \`◆社交孤立與情緒低落風險：藉由管家主動的社交媒合與活動引導，期待降低長輩的孤獨感並建立新的生活重心\`
   `;
 
+**【個案資料】**
+姓名：${data.personalDetails.name}
+年齡：${data.personalDetails.age}
+風險狀態：${dimInfo}
+高風險項目：${highRiskAnswers}
+  `;
+
+  // 4. 【關鍵修改】直接使用 fetch，不透過任何套件
+  // 這樣做可以避免 "Module not found" 或 "404" 的錯誤
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+  const payload = {
+    contents: [{
+      parts: [{ text: prompt }]
+    }]
+  };
+
   try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      contents: prompt,
+    const response = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
     });
-    return response.text || "無法生成報告，請重試。";
+
+    if (!response.ok) {
+      if (response.status === 429) {
+         return "⚠️ 系統忙碌中 (429 Error)。Google 免費版 API 有每分鐘限制，請稍等 1 分鐘後再試。";
+      }
+      const errorData = await response.json();
+      throw new Error(`API 請求失敗: ${response.status} - ${JSON.stringify(errorData)}`);
+    }
+
+    const result = await response.json();
+    
+    if (result.candidates && result.candidates.length > 0 && result.candidates[0].content) {
+      return result.candidates[0].content.parts[0].text;
+    } else {
+      return "無法生成報告，回傳格式異常。";
+    }
+
   } catch (error) {
-    console.error("Gemini API Error:", error);
+    console.error("Fetch Error:", error);
     throw error;
   }
 };
+
+
