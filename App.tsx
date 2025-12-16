@@ -88,7 +88,7 @@ const App: React.FC = () => {
                <div className="bg-teal-50 px-6 py-4 border-b border-teal-100 flex justify-between items-center">
                   <div>
                     <h2 className="text-lg font-semibold text-teal-900">數據評估與加值服務建議</h2>
-                    <p className="text-sm text-teal-700">基於 Gemini 2.5 Flash 模型分析</p>
+                    <p className="text-sm text-teal-700">基於好好園館生活管家服務模型分析</p>
                   </div>
                </div>
                
