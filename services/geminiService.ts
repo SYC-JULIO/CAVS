@@ -1,27 +1,22 @@
-
-import { GoogleGenAI } from "@google/genai";
 import { AssessmentData } from "../types";
 import { QUESTIONS, DIMENSION_NAMES } from "../constants";
 import { getDimensionRiskLevel } from "../utils/scoring";
 
+// 移除原本的 import { GoogleGenAI } ... 以免 Render 找不到套件報錯
+
 export const generateCareAdvice = async (data: AssessmentData): Promise<string> => {
-  // Safely access process.env to prevent "ReferenceError: process is not defined" in pure browser envs
-  let apiKey = '';
-  try {
-    if (typeof process !== 'undefined' && process.env) {
-      apiKey = process.env.API_KEY || '';
-    }
-  } catch (e) {
-    // Ignore error if process is not available
-  }
+  
+  // 1. 【這裡就是你要改的地方】
+  // 在 Vite 專案中，必須使用 import.meta.env 來讀取變數
+  const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
 
+  // 檢查是否有抓到 Key
   if (!apiKey) {
-    throw new Error("找不到 API Key。請確認您的環境變數 (process.env.API_KEY) 已正確設定。");
+    console.error("API Key 遺失");
+    throw new Error("找不到 API Key。請確認 Render 的 Environment Variables 設定正確，且變數名稱為 VITE_GOOGLE_API_KEY");
   }
 
-  const ai = new GoogleGenAI({ apiKey });
-
-  // Format high risk answers for the prompt
+  // 2. 資料準備 (邏輯不變)
   const highRiskAnswers = Object.entries(data.answers)
     .filter(([_, level]) => level === 'high')
     .map(([id]) => {
@@ -31,7 +26,6 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
     .filter(s => s !== '')
     .join('\n');
 
-  // Format dimensions
   const dims = [
     data.dimensions.physical,
     data.dimensions.family,
@@ -46,10 +40,8 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
 
   const highestDimIndex = dims.indexOf(Math.max(...dims));
   const highestDimName = DIMENSION_NAMES[highestDimIndex];
-  
-  // Check Q18 for financial stress (High risk on Q18 means "入不敷出")
-  const isFinancialStressHigh = data.answers[18] === 'high';
 
+  // 3. 組合 Prompt (保留原本邏輯)
   const prompt = `
 **【角色與任務設定】**
 
