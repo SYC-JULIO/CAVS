@@ -1,22 +1,41 @@
+
+import { GoogleGenAI } from "@google/genai";
 import { AssessmentData } from "../types";
 import { QUESTIONS, DIMENSION_NAMES } from "../constants";
 import { getDimensionRiskLevel } from "../utils/scoring";
 
-// 移除原本的 import { GoogleGenAI } ... 以免 Render 找不到套件報錯
-
 export const generateCareAdvice = async (data: AssessmentData): Promise<string> => {
+  // 優先讀取 Vite 的環境變數 (Render部署時會用到)
+  // Fallback 到 process.env (舊式環境)
+  let apiKey = '';
   
-  // 1. 【這裡就是你要改的地方】
-  // 在 Vite 專案中，必須使用 import.meta.env 來讀取變數
-  const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
-
-  // 檢查是否有抓到 Key
-  if (!apiKey) {
-    console.error("API Key 遺失");
-    throw new Error("找不到 API Key。請確認 Render 的 Environment Variables 設定正確，且變數名稱為 VITE_GOOGLE_API_KEY");
+  try {
+    // @ts-ignore - import.meta is a valid property in Vite environments
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+      // @ts-ignore
+      apiKey = import.meta.env.VITE_API_KEY || '';
+    }
+  } catch (e) {
+    // Ignore error
   }
 
-  // 2. 資料準備 (邏輯不變)
+  if (!apiKey) {
+    try {
+        if (typeof process !== 'undefined' && process.env) {
+            apiKey = process.env.API_KEY || process.env.REACT_APP_API_KEY || '';
+        }
+    } catch (e) {
+        // Ignore error
+    }
+  }
+
+  if (!apiKey) {
+    throw new Error("找不到 API Key。若您在本地端，請確認 .env 檔案；若在 Render，請確認 Environment Variables 設定為 'VITE_API_KEY'。");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
+
+  // Format high risk answers for the prompt
   const highRiskAnswers = Object.entries(data.answers)
     .filter(([_, level]) => level === 'high')
     .map(([id]) => {
@@ -26,6 +45,7 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
     .filter(s => s !== '')
     .join('\n');
 
+  // Format dimensions
   const dims = [
     data.dimensions.physical,
     data.dimensions.family,
@@ -40,10 +60,11 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
 
   const highestDimIndex = dims.indexOf(Math.max(...dims));
   const highestDimName = DIMENSION_NAMES[highestDimIndex];
+  
+  // Check Q18 for financial stress (High risk on Q18 means "入不敷出")
+  const isFinancialStressHigh = data.answers[18] === 'high';
 
-  // 3. 組合 Prompt (保留原本邏輯)
   const prompt = `
-**【角色與任務設定】**
 **【角色與任務設定】**
 
 您是「共居住宅」的**資深生活管家總管**（Senior Life Manager）。
@@ -115,52 +136,14 @@ ${data.qualitativeAnalysis}
     *   \`◆社交孤立與情緒低落風險：藉由管家主動的社交媒合與活動引導，期待降低長輩的孤獨感並建立新的生活重心\`
   `;
 
-**【個案資料】**
-姓名：${data.personalDetails.name}
-年齡：${data.personalDetails.age}
-風險狀態：${dimInfo}
-高風險項目：${highRiskAnswers}
-  `;
-
-  // 4. 【關鍵修改】直接使用 fetch，不透過任何套件
-  // 這樣做可以避免 "Module not found" 或 "404" 的錯誤
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
-  const payload = {
-    contents: [{
-      parts: [{ text: prompt }]
-    }]
-  };
-
   try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify(payload)
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
     });
-
-    if (!response.ok) {
-      if (response.status === 429) {
-         return "⚠️ 系統忙碌中 (429 Error)。Google 免費版 API 有每分鐘限制，請稍等 1 分鐘後再試。";
-      }
-      const errorData = await response.json();
-      throw new Error(`API 請求失敗: ${response.status} - ${JSON.stringify(errorData)}`);
-    }
-
-    const result = await response.json();
-    
-    if (result.candidates && result.candidates.length > 0 && result.candidates[0].content) {
-      return result.candidates[0].content.parts[0].text;
-    } else {
-      return "無法生成報告，回傳格式異常。";
-    }
-
+    return response.text || "無法生成報告，請重試。";
   } catch (error) {
-    console.error("Fetch Error:", error);
+    console.error("Gemini API Error:", error);
     throw error;
   }
 };
-
-
