@@ -4,60 +4,13 @@ import { AssessmentData } from "../types";
 import { QUESTIONS, DIMENSION_NAMES } from "../constants";
 import { getDimensionRiskLevel } from "../utils/scoring";
 
-// 修改：將重試次數降為 1，避免免費版額度瞬間耗盡
-const MAX_RETRIES = 1; 
-// 修改：延長重試等待時間
-const RETRY_DELAY_MS = 3500;
-
-// Helper function to handle retries for overloaded models
-async function generateContentWithRetry(ai: GoogleGenAI, model: string, prompt: string, retries = 0): Promise<string> {
-  try {
-    const response = await ai.models.generateContent({
-      model: model,
-      contents: prompt,
-    });
-    return response.text || "無法生成報告，請重試。";
-  } catch (error: any) {
-    // 強化錯誤訊息擷取
-    let errorMessage = '';
-    
-    if (typeof error === 'string') {
-        errorMessage = error;
-    } else if (error instanceof Error) {
-        errorMessage = error.message;
-        // 將詳細錯誤資訊附加在後面，以便前端判斷是 Daily 還是 Minute limit
-        errorMessage += ' ' + JSON.stringify(error);
-    } else {
-        errorMessage = JSON.stringify(error);
-    }
-    
-    // 1. Check for Quota Exceeded (429)
-    const isQuotaExceeded = 
-        errorMessage.includes('429') || 
-        /quota/i.test(errorMessage) || 
-        /resource_exhausted/i.test(errorMessage);
-
-    if (isQuotaExceeded) {
-        // 修改：不要拋出 generic error，而是拋出帶有原始訊息的錯誤，讓前端去分析是哪種 Quota
-        throw new Error(errorMessage);
-    }
-
-    // 2. Check for Server Overloaded (503)
-    const isOverloaded = 
-      errorMessage.includes('503') || 
-      /overloaded/i.test(errorMessage) || 
-      /unavailable/i.test(errorMessage);
-
-    if (isOverloaded && retries < MAX_RETRIES) {
-      console.warn(`Model overloaded (503). Retrying... (${retries + 1}/${MAX_RETRIES})`);
-      await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
-      return generateContentWithRetry(ai, model, prompt, retries + 1);
-    }
-    
-    // If not retry-able or max retries reached, throw the error
-    throw error;
-  }
-}
+// 定義模型嘗試順序
+const FALLBACK_MODELS = [
+  'gemini-2.5-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-2.5-flash-tts',
+  'gemini-robotics-er-1.5-preview'
+];
 
 export const generateCareAdvice = async (data: AssessmentData): Promise<string> => {
   // 優先讀取 Vite 的環境變數 (Render部署時會用到)
@@ -183,14 +136,31 @@ ${data.qualitativeAnalysis}
     *   \`◆社交孤立與情緒低落風險：藉由管家主動的社交媒合與活動引導，期待降低長輩的孤獨感並建立新的生活重心\`
   `;
 
-  try {
-    // 改用 'gemini-2.0-flash-exp'
-    // 1. 2.5系列已達額度上限。
-    // 2. 1.5系列 (flash, flash-002) 回傳 Not Found。
-    // 3. 2.0-flash-exp 是實驗版，通常額度較高且獨立計算。
-    return await generateContentWithRetry(ai, 'gemini-2.0-flash-exp', prompt);
-  } catch (error) {
-    console.error("Gemini API Error:", error);
-    throw error;
+  // 實作自動 Fallback 機制
+  let lastError: any = null;
+
+  for (const model of FALLBACK_MODELS) {
+    try {
+      console.log(`Attempting to generate with model: ${model}`);
+      const response = await ai.models.generateContent({
+        model: model,
+        contents: prompt,
+      });
+      
+      if (response.text) {
+          return response.text;
+      } else {
+          throw new Error('Empty response');
+      }
+
+    } catch (error: any) {
+      console.warn(`Model ${model} failed. Trying next...`, error);
+      lastError = error;
+      // 繼續嘗試下一個模型
+    }
   }
+
+  // 若迴圈結束仍無回傳，拋出特定錯誤
+  console.error("All models failed.", lastError);
+  throw new Error("模型已滿，請詢問系統管理員");
 };

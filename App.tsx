@@ -39,6 +39,13 @@ const App: React.FC = () => {
       
       let errorMessage = err.message || '生成報告時發生未知錯誤';
 
+      // 優先處理特定的系統管理員錯誤
+      if (errorMessage.includes('模型已滿') || errorMessage.includes('請詢問系統管理員')) {
+          setError(errorMessage);
+          setIsQuotaError(true); // 視為類似 Quota 的紅色/黃色警示
+          return;
+      }
+
       // Parse specific error types
       if (errorMessage.includes('429') || /quota/i.test(errorMessage) || /resource_exhausted/i.test(errorMessage)) {
         setIsQuotaError(true);
@@ -150,7 +157,7 @@ const App: React.FC = () => {
                      
                      <div className="max-w-md">
                         <p className={`font-bold text-lg mb-2 ${isQuotaError ? 'text-slate-800' : 'text-red-600'}`}>
-                           {isQuotaError ? 'AI 正在休息中 (額度緩衝)' : '發生錯誤'}
+                           {error.includes('模型已滿') ? '系統訊息' : (isQuotaError ? 'AI 正在休息中 (額度緩衝)' : '發生錯誤')}
                         </p>
                         <p className="text-slate-600 font-medium">
                           {error}
