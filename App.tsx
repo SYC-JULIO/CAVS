@@ -30,9 +30,11 @@ const App: React.FC = () => {
     try {
       const result = await generateCareAdvice(data);
       setReport(result);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError('生成報告時發生錯誤，請稍後再試。請確保 API Key 設定正確。');
+      // Show the actual error message if available, otherwise show default
+      const errorMessage = err.message || '生成報告時發生未知錯誤';
+      setError(`錯誤：${errorMessage} (請檢查 API Key 設定或網路連線)`);
     } finally {
       setIsLoading(false);
     }
@@ -54,6 +56,7 @@ const App: React.FC = () => {
           </div>
           <div className="hidden md:flex items-center space-x-4 text-sm text-slate-600">
             <span className="flex items-center"><ClipboardList className="w-4 h-4 mr-1"/> 結構化評估</span>
+            <span className="text-slate-300">|</span>
             <span className="text-slate-300">|</span>
             <span className="flex items-center"><FileBarChart className="w-4 h-4 mr-1"/> AI 分析報告</span>
           </div>
@@ -94,9 +97,10 @@ const App: React.FC = () => {
                
                <div className="flex-1 p-8 overflow-y-auto max-h-[calc(100vh-200px)]">
                  {error ? (
-                   <div className="flex flex-col items-center justify-center h-full text-red-500 space-y-4">
-                     <AlertCircle className="w-12 h-12" />
-                     <p>{error}</p>
+                   <div className="flex flex-col items-center justify-center h-full text-red-500 space-y-4 p-4 text-center">
+                     <AlertCircle className="w-12 h-12 flex-shrink-0" />
+                     <p className="font-medium">{error}</p>
+                     <p className="text-xs text-slate-400">若為 API Key Missing，請確認系統環境變數。</p>
                    </div>
                  ) : (
                    <ReportViewer report={report} isLoading={isLoading} data={data} />
