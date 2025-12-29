@@ -8,7 +8,7 @@ import { getDimensionRiskLevel } from "../utils/scoring";
  * 嚴格遵循使用者指定之免付費模型備援鏈
  */
 const FALLBACK_MODELS = [
-  'gemini-2.5-flash-lite',
+  'gemini-2.5-flash-lite-latest',
   'gemini-2.5-flash-preview-tts',
   'gemini-2.5-flash-latest',
   'gemini-3-flash-preview',
@@ -17,13 +17,8 @@ const FALLBACK_MODELS = [
 ];
 
 export const generateCareAdvice = async (data: AssessmentData): Promise<string> => {
-  const apiKey = process.env.API_KEY;
-  
-  if (!apiKey) {
-    throw new Error("系統環境設定異常，請聯繫工作人員。");
-  }
-
-  // 初始化 AI 客戶端
+  // 不在此處拋出錯誤，讓 GoogleGenAI 嘗試使用注入的 API_KEY
+  const apiKey = process.env.API_KEY || "";
   const ai = new GoogleGenAI({ apiKey });
 
   const highRiskAnswers = Object.entries(data.answers)
@@ -125,10 +120,13 @@ ${data.qualitativeAnalysis}
       });
       if (response.text) return response.text;
     } catch (error: any) {
-      console.warn(`模型 ${model} 呼叫失敗，嘗試下一個備援模型。`);
+      console.warn(`嘗試模型 ${model} 失敗:`, error.message);
+      // 如果錯誤訊息包含授權問題，且環境允許，我們在 App 層級處理對話框
+      if (error.message.includes("API key") || error.message.includes("403") || error.message.includes("401")) {
+         throw new Error("AUTH_REQUIRED");
+      }
     }
   }
   
-  // 若所有備援模型皆失敗，顯示指定訊息
   throw new Error("今日免費額度已用完，請聯繫工作人員");
 };

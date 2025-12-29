@@ -36,12 +36,25 @@ const App: React.FC = () => {
       setReport(result);
     } catch (err: any) {
       console.error(err);
-      let errorMessage = err.message || '發生未知錯誤';
       
+      // 如果是授權錯誤，靜默開啟金鑰選擇器，不顯示說明
+      if (err.message === "AUTH_REQUIRED") {
+        // @ts-ignore
+        if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
+           // @ts-ignore
+           window.aistudio.openSelectKey();
+           setError("請在彈出的視窗中選擇金鑰以繼續分析。");
+        } else {
+           setError("系統授權異常，請稍後再試。");
+        }
+        setIsLoading(false);
+        return;
+      }
+
+      let errorMessage = err.message || '發生未知錯誤';
       if (errorMessage.includes('今日免費額度已用完')) {
           setIsQuotaError(true);
       }
-      
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -63,7 +76,7 @@ const App: React.FC = () => {
           </div>
           <div className="hidden md:flex items-center space-x-6">
             <div className="flex flex-col items-end">
-               <span className="text-xs font-bold text-slate-600 uppercase">住戶狀態評估｜心理狀態評估｜決策支援</span>
+               <span className="text-xs font-bold text-slate-600 uppercase tracking-tight">住戶狀態評估｜心理狀態評估｜決策支援</span>
             </div>
             <div className="h-8 w-px bg-slate-200"></div>
             <HelpCircle className="w-5 h-5 text-slate-300 cursor-help hover:text-teal-600 transition-colors" />
