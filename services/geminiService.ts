@@ -6,6 +6,12 @@ import { getDimensionRiskLevel } from "../utils/scoring";
 
 /**
  * 依照使用者要求設定模型循環序列
+ * 1. gemini-2.5-flash
+ * 2. gemini-2.5-flash-lite
+ * 3. gemini-2.5-flash-preview-tts
+ * 4. gemini-3-flash
+ * 5. gemini-robotics-er-1.5-preview
+ * 6. gemma-3-12b
  */
 const MODELS_FALLBACK = [
   'gemini-2.5-flash-latest',
@@ -18,6 +24,10 @@ const MODELS_FALLBACK = [
 
 export const generateCareAdvice = async (data: AssessmentData): Promise<string> => {
   const apiKey = process.env.API_KEY;
+
+  if (!apiKey) {
+    throw new Error("AUTH_REQUIRED");
+  }
 
   const detectedCrisis = Object.entries(data.crisisAnswers)
     .filter(([_, val]) => val === true)
@@ -64,7 +74,7 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
    * ⚠️ 禁語：嚴格禁止出現「照護」、「醫療」等醫療詞彙。請改用「生活協助」、「管家介入」等。
   `;
 
-  // 嘗試循環模型
+  // 嘗試循環模型邏輯
   for (let i = 0; i < MODELS_FALLBACK.length; i++) {
     const currentModel = MODELS_FALLBACK[i];
     try {
@@ -78,21 +88,22 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
         return response.text;
       }
     } catch (error: any) {
-      console.warn(`[Model Fallback] ${currentModel} failed, trying next...`, error);
+      console.warn(`[Model Fallback Attempt ${i+1}/${MODELS_FALLBACK.length}] ${currentModel} failed:`, error.message);
+      
       const errorStr = error.toString().toLowerCase();
       
-      // 如果是授權問題 (401/403)，直接拋出以便 App 處理
+      // 若是金鑰無效 (401/403)，通常切換模型也沒用，直接拋出
       if (errorStr.includes("api key") || errorStr.includes("401") || errorStr.includes("unauthorized")) {
         throw new Error("AUTH_REQUIRED");
       }
 
-      // 如果不是最後一個模型，且錯誤是配額或暫時性錯誤，則繼續嘗試下一個
+      // 如果不是最後一個模型，則嘗試下一個
       if (i < MODELS_FALLBACK.length - 1) {
         continue; 
       }
     }
   }
 
-  // 若所有模型都嘗試失敗
+  // 若循環結束仍無結果
   throw new Error("今日免費額度已用完，請聯繫工作人員");
 };

@@ -37,16 +37,13 @@ const App: React.FC = () => {
     } catch (err: any) {
       console.error("Operation Failed:", err);
       
-      if (err.message === "AUTH_REQUIRED") {
-        setError("API 金鑰授權失敗，請確認環境設定。");
-        setIsLoading(false);
-        return;
-      }
-
       const errorMessage = err.message || '連線逾時，請檢查網路狀態。';
+      
       if (errorMessage.includes('額度') || errorMessage.includes('429')) {
           setIsQuotaError(true);
           setError("今日免費額度已用完，請聯繫工作人員");
+      } else if (err.message === "AUTH_REQUIRED") {
+          setError("API 金鑰驗證失敗，請確認伺服器環境設定。");
       } else {
           setError(errorMessage);
       }
@@ -69,14 +66,14 @@ const App: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="hidden md:flex items-center text-slate-400 text-xs font-bold tracking-tighter">
+            <div className="hidden lg:flex items-center text-slate-400 text-xs font-bold tracking-wider">
               <span>住戶狀態評估</span>
-              <span className="mx-2 text-slate-200">|</span>
+              <span className="mx-3 text-slate-200">|</span>
               <span>心理狀態評估</span>
-              <span className="mx-2 text-slate-200">|</span>
-              <span className="text-teal-600">決策支援</span>
+              <span className="mx-3 text-slate-200">|</span>
+              <span className="text-teal-600 font-black">決策支援</span>
             </div>
-            <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>
+            <div className="h-6 w-px bg-slate-200 hidden lg:block"></div>
             <HelpCircle className="w-5 h-5 text-slate-300 cursor-help hover:text-teal-600 transition-colors" />
           </div>
         </div>
@@ -84,7 +81,6 @@ const App: React.FC = () => {
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* 左側：評估輸入 */}
           <div className="lg:col-span-5">
             <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden sticky top-24 ring-1 ring-slate-100">
               <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
@@ -104,7 +100,6 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          {/* 右側：報告呈現 */}
           <div className="lg:col-span-7">
              <div className="bg-white rounded-2xl shadow-xl border border-slate-200 h-full min-h-[700px] flex flex-col overflow-hidden ring-1 ring-teal-50">
                <div className="bg-teal-600 px-6 py-5 border-b border-teal-700">
