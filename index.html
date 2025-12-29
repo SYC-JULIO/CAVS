@@ -31,53 +31,59 @@
       @media print {
         @page {
           margin: 1cm;
+          size: auto;
         }
-        body {
+        html, body {
+          height: auto !important;
+          overflow: visible !important;
           background-color: white !important;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
         /* 隱藏非必要元素 */
-        header, .lg\:col-span-5, .print\:hidden, button, .share-toolbar {
+        header, .lg\:col-span-5, .print\:hidden, button, .share-toolbar, .no-print {
           display: none !important;
         }
-        /* 使報告區域佔滿全寬並可正常分頁 */
+        /* 使報告區域佔滿全寬並展開內容 */
         .lg\:col-span-7 {
           width: 100% !important;
           grid-column: span 12 / span 12 !important;
           position: static !important;
           display: block !important;
+          overflow: visible !important;
         }
         .max-w-7xl {
             max-width: none !important;
             padding: 0 !important;
             margin: 0 !important;
         }
-        /* 確保捲動容器在列印時展開 */
-        .overflow-y-auto {
+        /* 強制展開所有捲動容器，避免被裁切 */
+        .overflow-y-auto, .overflow-hidden, [class*="max-h-"] {
             overflow: visible !important;
             max-height: none !important;
             height: auto !important;
+            display: block !important;
         }
-        .shadow-xl, .shadow-sm, .shadow-md {
+        /* 移除陰影與背景限制 */
+        .shadow-xl, .shadow-sm, .shadow-md, .shadow-inner {
             box-shadow: none !important;
         }
         .border {
             border: 1px solid #e2e8f0 !important;
         }
-        .bg-slate-50, .bg-teal-50 {
-            background-color: transparent !important;
-        }
-        /* 強制加值服務試算表不要被截斷 */
+        /* 頁面分割控制 */
         .print\:break-inside-avoid {
-            break-inside: avoid;
-            page-break-inside: avoid;
-            display: block !important;
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+        }
+        .print\:mt-8 {
             margin-top: 2rem !important;
         }
-        /* 修正 Markdown 顏色在黑白列印時的清晰度 */
-        .prose strong {
-            color: #b91c1c !important;
+        /* 確保表格內容完整 */
+        .service-list-container {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 0.5rem !important;
         }
       }
     </style>

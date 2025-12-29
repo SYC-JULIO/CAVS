@@ -16,7 +16,6 @@ const MODELS_FALLBACK = [
 ];
 
 export const generateCareAdvice = async (data: AssessmentData): Promise<string> => {
-  // 在 Vite/Render 環境下，嘗試讀取多種可能的變數名稱以增加容錯率
   const apiKey = process.env.API_KEY || (import.meta as any).env?.VITE_API_KEY || (import.meta as any).env?.VITE_GOOGLE_API_KEY;
 
   if (!apiKey) {
@@ -64,10 +63,10 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
 1. **心理危機處置建議**：針對檢出的心理危機，給予生活管家最直接的應對與環境安全指引。
 2. **風險管理策略**：結合最高風險面向「${highestDimName}」，標註**粗體安全警示**項目。
 3. **服務預期產生效益**：
-   * ⚠️ 重要：請使用「條列式 (Bullet Points)」呈現，嚴禁使用 Markdown 表格。
+   * ⚠️ 嚴格執行：請使用「條列式 (Bullet Points)」呈現，嚴禁使用任何形式的 Markdown 表格。
    * 格式要求：
      * ◆ [潛在問題]：藉由 [管家介入手段]，期待 [改善效益]。
-   * ⚠️ 禁語：嚴格禁止出現「照護」、「醫療」等醫療詞彙。請改用「生活協助」、「管家介入」等。
+   * ⚠️ 禁語：嚴格禁止出現「照護」、「醫療」、「患者」、「病人」等醫療化詞彙。請改用「生活協助」、「管家介入」、「個案」、「長輩」等。
   `;
 
   let lastErrorMsg = "";
@@ -89,7 +88,6 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
       const message = error.message || "No message provided";
       console.warn(`[Fallback] ${currentModel} failed (Status: ${status}): ${message}`);
 
-      // 建立詳細的偵錯訊息
       if (message.includes("401") || message.includes("403") || message.includes("API key not valid")) {
           lastErrorMsg = `[401/403] API 金鑰無效或權限不足。`;
           throw new Error(lastErrorMsg);

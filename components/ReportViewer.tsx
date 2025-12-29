@@ -94,52 +94,33 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
       monthlyTotal += dailyUnitPrice * s.dailyFreq * s.monthlyDays;
     });
 
-    const getLight = (score: number) => {
+    const getLightLabel = (score: number) => {
       const level = getDimensionRiskLevel(score);
-      return level === 'Red' ? '🔴紅燈' : level === 'Yellow' ? '🟡黃燈' : '🟢綠燈';
+      return level === 'Red' ? '🔴 紅燈' : level === 'Yellow' ? '🟡 黃燈' : '🟢 綠燈';
     };
 
     const payload = {
-      resident_info: {
-        name: data.personalDetails.name,
-        room: data.personalDetails.roomNumber,
-        age: data.personalDetails.age,
-        gender: data.personalDetails.gender,
-        contact: data.personalDetails.contact
-      },
-      assessment: {
-        total_score: data.totalScore,
-        risk_level: data.riskLevel,
-        crisis_status: data.crisisStatus,
-        dimensions: {
-          physical: { score: data.dimensions.physical, light: getLight(data.dimensions.physical) },
-          family: { score: data.dimensions.family, light: getLight(data.dimensions.family) },
-          mental: { score: data.dimensions.mental, light: getLight(data.dimensions.mental) },
-          management: { score: data.dimensions.management, light: getLight(data.dimensions.management) }
-        }
-      },
-      ai_report: report,
-      services: {
-        items: selectedServices.map(s => ({
-          name: s.name,
-          qty: s.dailyFreq,
-          unit: s.unit,
-          days: s.monthlyDays,
-          subtotal: Math.round((s.unit === '月' ? s.price/30 : s.price) * s.dailyFreq * s.monthlyDays)
-        })),
-        monthly_total: Math.round(monthlyTotal)
-      },
-      // 直接提供 Notion 要求的格式文字，方便 Make.com mapping
-      notion_formatted: {
-        name: data.personalDetails.name,
-        room: data.personalDetails.roomNumber,
-        crisis: data.crisisStatus === 'Red' ? '🔴 高度風險' : data.crisisStatus === 'Yellow' ? '🟡 中度風險' : '🟢 穩定',
-        dim1: `照顧模式的複雜度: ${data.dimensions.physical}分: ${getLight(data.dimensions.physical)}`,
-        dim2: `家庭溝通成本: ${data.dimensions.family}分: ${getLight(data.dimensions.family)}`,
-        dim3: `衝突與風險管理: ${data.dimensions.mental}分: ${getLight(data.dimensions.mental)}`,
-        dim4: `後續維運成本: ${data.dimensions.management}分: ${getLight(data.dimensions.management)}`,
-        total_fee: Math.round(monthlyTotal)
-      }
+      // 按照使用者要求串連的項目
+      姓名: data.personalDetails.name,
+      房間號碼: data.personalDetails.roomNumber || '未安排',
+      心理危機判定: data.crisisStatus === 'Red' ? '🔴 高度風險' : data.crisisStatus === 'Yellow' ? '🟡 中度風險' : '🟢 穩定',
+      '照顧模式的複雜度:分數:燈號': `${data.dimensions.physical}分 : ${getLightLabel(data.dimensions.physical)}`,
+      '家庭溝通成本:分數:燈號': `${data.dimensions.family}分 : ${getLightLabel(data.dimensions.family)}`,
+      '衝突與風險管理:分數:燈號': `${data.dimensions.mental}分 : ${getLightLabel(data.dimensions.mental)}`,
+      '後續維運成本:分數:燈號': `${data.dimensions.management}分 : ${getLightLabel(data.dimensions.management)}`,
+      加值服務月費總計: Math.round(monthlyTotal),
+      
+      // 額外細節供後台記錄
+      assessment_date: todayDate,
+      raw_ai_report: report,
+      detailed_services: selectedServices.map(s => ({
+        name: s.name,
+        price: s.price,
+        unit: s.unit,
+        qty: s.dailyFreq,
+        days: s.monthlyDays,
+        subtotal: Math.round((s.unit === '月' ? s.price/30 : s.price) * s.dailyFreq * s.monthlyDays)
+      }))
     };
 
     try {
@@ -160,7 +141,6 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
       
       {/* Notion Integration Toolbar */}
       <div className="space-y-4 mb-6 print:hidden share-toolbar">
-        {/* Webhook URL Input Space */}
         <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-col sm:flex-row gap-3 items-center shadow-inner">
           <div className="flex items-center text-slate-500 shrink-0">
             <Link className="w-4 h-4 mr-2" />
@@ -204,14 +184,14 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
         </div>
       </div>
 
-      {/* 報告標題 (含日期) */}
+      {/* 報告標題 (含日期並排，靠右) */}
       <div className="bg-teal-700 text-white px-6 py-4 rounded-t-xl mb-0 flex justify-between items-center print:rounded-none">
         <h2 className="text-xl font-black flex items-center">
           <FileText className="w-6 h-6 mr-2" />
           好好園館決策支援報告
         </h2>
-        <div className="flex items-center text-sm font-bold bg-teal-800/50 px-3 py-1 rounded-full">
-          <CalendarIcon className="w-4 h-4 mr-2 opacity-70" />
+        <div className="flex items-center text-sm font-bold opacity-90">
+          <CalendarIcon className="w-4 h-4 mr-2" />
           評估日期：{todayDate}
         </div>
       </div>
@@ -243,7 +223,7 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
 
         <RadarChart dimensions={data.dimensions} />
 
-        <div className="prose prose-slate prose-headings:text-teal-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700 max-w-none">
+        <div className="prose prose-slate prose-headings:text-teal-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700 max-w-none mb-10">
           <div className="flex items-center space-x-2 mb-6 pb-4 border-b border-slate-100 print:hidden">
             <Bot className="w-5 h-5 text-teal-600" />
             <span className="text-xs font-bold text-teal-600 uppercase tracking-widest">AI 管家決策系統生成之專業報告</span>
@@ -264,7 +244,8 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
           </ReactMarkdown>
         </div>
 
-        <div className="print:break-inside-avoid">
+        {/* 加值服務區塊：確保列印時展開 */}
+        <div className="print:break-inside-avoid print:mt-8">
           <ServiceCalculator 
              data={data} 
              selectedServices={selectedServices}
