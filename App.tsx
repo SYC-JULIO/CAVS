@@ -4,7 +4,7 @@ import { AssessmentForm } from './components/AssessmentForm';
 import { ReportViewer } from './components/ReportViewer';
 import { generateCareAdvice } from './services/geminiService';
 import { AssessmentData } from './types';
-import { Activity, AlertCircle, Clock, HelpCircle } from 'lucide-react';
+import { Activity, AlertCircle, Clock, HelpCircle, Terminal } from 'lucide-react';
 
 const INITIAL_DATA: AssessmentData = {
   personalDetails: { name: '', gender: '', age: '', contact: '', roomNumber: '' },
@@ -35,15 +35,13 @@ const App: React.FC = () => {
       const result = await generateCareAdvice(data);
       setReport(result);
     } catch (err: any) {
-      console.error("Operation Failed:", err);
+      console.error("Critical API Error:", err);
       
-      const errorMessage = err.message || '連線逾時，請檢查網路狀態。';
+      const errorMessage = err.message || '發生未知錯誤';
       
       if (errorMessage.includes('額度') || errorMessage.includes('429')) {
           setIsQuotaError(true);
           setError("今日免費額度已用完，請聯繫工作人員");
-      } else if (err.message === "AUTH_REQUIRED") {
-          setError("API 金鑰驗證失敗，請確認伺服器環境設定。");
       } else {
           setError(errorMessage);
       }
@@ -66,11 +64,11 @@ const App: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            <div className="hidden lg:flex items-center text-slate-400 text-xs font-bold tracking-wider">
-              <span>住戶狀態評估</span>
-              <span className="mx-3 text-slate-200">|</span>
-              <span>心理狀態評估</span>
-              <span className="mx-3 text-slate-200">|</span>
+            <div className="hidden lg:flex items-center text-slate-500 text-xs font-bold tracking-widest bg-slate-50 px-4 py-2 rounded-full border border-slate-100">
+              <span className="hover:text-teal-600 transition-colors">住戶狀態評估</span>
+              <span className="mx-3 text-slate-300">|</span>
+              <span className="hover:text-teal-600 transition-colors">心理狀態評估</span>
+              <span className="mx-3 text-slate-300">|</span>
               <span className="text-teal-600 font-black">決策支援</span>
             </div>
             <div className="h-6 w-px bg-slate-200 hidden lg:block"></div>
@@ -81,6 +79,7 @@ const App: React.FC = () => {
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* 左側：評估輸入 */}
           <div className="lg:col-span-5">
             <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden sticky top-24 ring-1 ring-slate-100">
               <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
@@ -100,6 +99,7 @@ const App: React.FC = () => {
             </div>
           </div>
 
+          {/* 右側：報告呈現 */}
           <div className="lg:col-span-7">
              <div className="bg-white rounded-2xl shadow-xl border border-slate-200 h-full min-h-[700px] flex flex-col overflow-hidden ring-1 ring-teal-50">
                <div className="bg-teal-600 px-6 py-5 border-b border-teal-700">
@@ -115,15 +115,28 @@ const App: React.FC = () => {
                      <div className="p-4 bg-red-50 rounded-full">
                         {isQuotaError ? <Clock className="w-16 h-16 text-amber-500" /> : <AlertCircle className="w-16 h-16 text-red-500" />}
                      </div>
-                     <div className="max-w-md">
-                        <h3 className="font-black text-2xl mb-3 text-slate-800">系統提示</h3>
-                        <p className="text-slate-500 font-medium leading-relaxed mb-8">{error}</p>
+                     <div className="max-w-md w-full">
+                        <h3 className="font-black text-2xl mb-3 text-slate-800">API 呼叫異常</h3>
+                        
+                        <div className="bg-slate-900 rounded-xl p-4 mb-8 text-left overflow-hidden">
+                          <div className="flex items-center text-slate-500 mb-2 border-b border-slate-800 pb-2">
+                            <Terminal className="w-4 h-4 mr-2" />
+                            <span className="text-[10px] font-mono uppercase tracking-widest">Debug Diagnostic Information</span>
+                          </div>
+                          <p className="text-red-400 font-mono text-sm leading-relaxed break-words italic">
+                            Error: {error}
+                          </p>
+                        </div>
+
                         <button 
                           onClick={handleGenerate}
-                          className="bg-teal-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-teal-700 transition-all shadow-lg shadow-teal-200"
+                          className="bg-teal-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-teal-700 transition-all shadow-lg shadow-teal-200 w-full sm:w-auto"
                         >
                           重新嘗試生成
                         </button>
+                        <p className="mt-4 text-xs text-slate-400">
+                          若持續報錯且包含「API Key」，請檢查 Render 環境變數是否包含 VITE_API_KEY。
+                        </p>
                      </div>
                    </div>
                  ) : (
