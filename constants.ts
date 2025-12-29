@@ -24,10 +24,15 @@ export const CRISIS_QUESTIONS: CrisisQuestionConfig[] = [
 export const QUESTIONS: QuestionConfig[] = [
   // 第一部分：照顧需求與個案狀況 (ID 1-4)
   {
-    id: 1, part: "第一部分：照顧需求與個案狀況", text: "是否已有外籍看護協助？",
+    id: 1, part: "第一部分：照顧需求與個案狀況", text: "是否已有看護協助？",
     weights: { none: [0,0,0,0], low: [2,0,0,1], medium: [4,0,0,2], high: [8,0,0,5] },
     options: { none: "無/未選", low: "輕微", medium: "中等", high: "嚴重" },
-    descriptions: { none: "無外籍看護，由家人或台籍居服員照顧。", low: "申請中或剛抵達，尚在磨合期（未滿3個月）。", medium: "穩定聘僱中，足以應付日常照顧，無重大異動。", high: "外籍看護逃逸、轉換雇主空窗期、或與雇主有重大勞資爭議。" }
+    descriptions: { 
+      none: "無看護", 
+      low: "每天 1-5 HR", 
+      medium: "每天 6-12 HR", 
+      high: "每天 13-24 HR" 
+    }
   },
   {
     id: 2, part: "第一部分：照顧需求與個案狀況", text: "受照顧者目前失能程度？ (參考 ADLs)",
@@ -89,7 +94,7 @@ export const QUESTIONS: QuestionConfig[] = [
     id: 9, part: "第三部分：醫療與安全風險", text: "是否伴隨精神、情緒或成癮議題？",
     weights: { none: [0,0,0,0], low: [0,1,3,1], medium: [1,2,7,3], high: [2,4,15,6] },
     options: { none: "無/未選", low: "輕微", medium: "中等", high: "嚴重" },
-    descriptions: { none: "情緒穩定。", low: "偶有情緒低落或焦慮，輕微菸酒習慣。", medium: "有憂鬱/躁鬱診斷服藥中，或有酗酒/藥物依賴影響作息。", high: "精神症狀急性發作期（幻覺、妄想），或成癮導致無法自理。" }
+    descriptions: { none: "情緒穩定。", low: "偶有情緒低落或焦慮，輕微菸酒習慣。", medium: "有憂鬱/躁鬱診斷服藥中，或有酗酒/藥物依賴影響作息。", high: "精神症狀急性發作期（幻覺、妄望），或成癮導致無法自理。" }
   },
   {
     id: 12, part: "第三部分：醫療與安全風險", text: "是否曾有失蹤、走失經驗？",
@@ -159,7 +164,6 @@ export const QUESTIONS: QuestionConfig[] = [
     options: { none: "無/未選", low: "輕微", medium: "中等", high: "嚴重" },
     descriptions: { none: "家庭功能良好，無需介入。", low: "需諮詢一般福利資訊。", medium: "需連結單一資源（如申請輔具、送餐）。", high: "多重問題家庭，需跨醫療、社政、警政共同介入（高關懷）。" }
   },
-  // Fix: Added missing 'descriptions' for IDs 17, 18, 19, 25, 26, 28, 29, 30 and normalized options.
   {
     id: 17, part: "第五部分：法律、經濟與社會資源", text: "居住環境是否安全？",
     weights: { none: [0,0,0,0], low: [0,0,1,1], medium: [1,1,2,3], high: [2,2,4,6] },
@@ -206,7 +210,7 @@ export const QUESTIONS: QuestionConfig[] = [
     id: 30, part: "第五部分：法律、經濟與社會資源", text: "個案是否有對照顧人員提出不實指控紀錄？",
     weights: { none: [0,0,0,0], low: [0,1,2,3], medium: [1,2,5,6], high: [2,4,10,12] },
     options: { none: "無/良好", low: "輕微", medium: "中等", high: "嚴重" },
-    descriptions: { none: "無。", low: "記憶模糊導致的誤會（如以為錢包不見）。", medium: "曾指控偷竊或虐待，經查證為誤會，但頻率較高。", high: "習慣性妄望並報警指控照顧者，造成照顧者極大法律風險。" }
+    descriptions: { none: "無。", low: "記憶模糊導致的誤會（如以為錢包不見）。", medium: "曾指控偷竊或虐待，經查證為誤會，但頻率較高。", high: "習慣性妄想並報警指控照顧者，造成照顧者極大法律風險。" }
   }
 ];
 

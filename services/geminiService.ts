@@ -5,33 +5,28 @@ import { QUESTIONS, DIMENSION_NAMES, CRISIS_QUESTIONS } from "../constants";
 import { getDimensionRiskLevel } from "../utils/scoring";
 
 /**
- * 依照指引規定之型號進行嘗試 (Fallback Sequence)
- * 1. gemini-3-pro-preview (高階推理，支援思考功能)
- * 2. gemini-3-flash-preview (平衡效能)
- * 3. gemini-flash-lite-latest (輕量快速，極低延遲)
- * 4. gemini-flash-latest (穩定版本保底)
+ * 依照任務類型設定模型嘗試順序 (Fallback Strategy)
+ * 1. gemini-3-pro-preview (用於複雜推理與深度風險評估)
+ * 2. gemini-3-flash-preview (用於平衡的文本任務)
+ * 3. gemini-2.5-flash-preview-tts (備援選項)
+ * 4. gemini-flash-lite-latest (極速響應備援)
  */
 const MODELS_TO_TRY = [
   'gemini-3-pro-preview',
   'gemini-3-flash-preview',
-  'gemini-flash-lite-latest',
-  'gemini-flash-latest'
+  'gemini-2.5-flash-preview-tts',
+  'gemini-flash-lite-latest'
 ];
 
 export const generateCareAdvice = async (data: AssessmentData): Promise<string> => {
-  // 1. 取得並檢查 API 金鑰 (由系統環境注入)
+  // 1. 取得並檢查 API 金鑰 (由系統環境注入，遵守 process.env.API_KEY 規範)
+  const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
 
-// 在 Vite 專案中，這是唯一官方支援且穩定的讀取方式
-const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
+  if (!apiKey || apiKey === 'undefined') {
+    throw new Error("系統偵測不到 API 金鑰。請確認環境變數 'API_KEY' 配置正確。");
+  }
 
-if (!apiKey || apiKey === 'undefined') {
-  // 這行是用來 debug 的，如果部署後看到這行，代表環境變數沒寫進去
-  console.error("Critical Error: VITE_GOOGLE_API_KEY is missing in import.meta.env");
-  throw new Error("系統偵測不到 API 金鑰。請確認 Render 環境變數為 'VITE_GOOGLE_API_KEY'。");
-}
-
-  
-  // 2. 格式化評估數據
+  // 2. 格式化評估數據以供 AI 分析
   const detectedCrisis = Object.entries(data.crisisAnswers || {})
     .filter(([_, val]) => val === true)
     .map(([id]) => {
@@ -93,47 +88,47 @@ if (!apiKey || apiKey === 'undefined') {
 
   let lastError: any = null;
 
-  // 3. 執行備援迴圈
+  // 3. 執行備援迴圈，確保服務可用性
   for (const modelName of MODELS_TO_TRY) {
     try {
-      console.log(`[Gemini SDK] 正在嘗試呼叫模型: ${modelName}`);
+      console.log(`[Gemini SDK] 正在呼叫模型: ${modelName}`);
       
-      // 規範：每次發起請求前初始化實例
+      // 規範：每次發起請求前使用 new GoogleGenAI 初始化
       const ai = new GoogleGenAI({ apiKey });
       
-      // 判斷是否支援思考功能 (3 系列與 2.5 系列)
-      const supportsThinking = modelName.includes('gemini-3') || modelName.includes('gemini-2.5');
+      // 根據指引，Gemini 3 系列支援思考功能以提高分析品質
+      const isAdvancedModel = modelName.includes('gemini-3') || modelName.includes('gemini-2.5');
       
       const response = await ai.models.generateContent({
         model: modelName,
         contents: prompt,
         config: {
           systemInstruction,
-          ...(supportsThinking ? { thinkingConfig: { thinkingBudget: 2000 } } : {})
+          ...(isAdvancedModel ? { thinkingConfig: { thinkingBudget: 2000 } } : {})
         },
       });
 
-      // 成功獲取結果 (使用 .text 屬性而非方法)
+      // 遵守規範：使用 .text 屬性獲取字串內容
       if (response && response.text) {
         console.log(`[Gemini SDK] 模型 ${modelName} 成功生成報告。`);
         return response.text;
       }
       
-      throw new Error("模型回應內容為空");
+      throw new Error("模型回應異常：空內容");
     } catch (err: any) {
       lastError = err;
       const errorMsg = err.message || "";
-      console.warn(`[Gemini SDK] 模型 ${modelName} 失敗: ${errorMsg}`);
+      console.warn(`[Gemini SDK] 模型 ${modelName} 調用失敗: ${errorMsg}`);
       
-      // 關鍵錯誤攔截：如果是 403 或金鑰無效，不需要重試其他模型
+      // 若為授權或金鑰錯誤，不進行後續重試
       if (errorMsg.includes('403') || errorMsg.includes('API_KEY_INVALID') || errorMsg.includes('permission')) {
-        throw new Error("API 金鑰權限不足或無效。請確認您的 Google AI Studio 金鑰是否處於可用狀態且已綁定付費專案。");
+        throw new Error("API 金鑰驗證失敗。請確認 Google AI Studio 金鑰有效且具備足夠權限。");
       }
       
-      // 429 或其他網路錯誤則繼續下一個模型
+      // 429 或 5xx 錯誤則嘗試下一個備援模型
     }
   }
 
-  // 4. 全部失敗時的回報
-  throw new Error(`所有模型嘗試皆失敗。最後一項錯誤訊息：${lastError?.message || "網路連線異常，請稍後再試"}`);
+  // 4. 全數嘗試失敗
+  throw new Error(`生成分析報告失敗：所有嘗試的模型均無法提供服務。最後錯誤：${lastError?.message || "網路通訊異常"}`);
 };
