@@ -5,24 +5,29 @@ import { QUESTIONS, DIMENSION_NAMES, CRISIS_QUESTIONS } from "../constants";
 import { getDimensionRiskLevel } from "../utils/scoring";
 
 /**
- * 依照官方規範與穩定度設定模型嘗試順序
- * 優先使用 Gemini 3 系列，其次為穩定版 Flash 系列
+ * 依照指引規定之型號進行嘗試 (Fallback Sequence)
+ * 1. gemini-3-pro-preview (高階推理，支援思考功能)
+ * 2. gemini-3-flash-preview (平衡效能)
+ * 3. gemini-flash-lite-latest (輕量快速，極低延遲)
+ * 4. gemini-flash-latest (穩定版本保底)
  */
 const MODELS_TO_TRY = [
+  'gemini-3-pro-preview',
   'gemini-3-flash-preview',
-  'gemini-flash-latest',
   'gemini-flash-lite-latest',
-  'gemini-3-pro-preview'
+  'gemini-flash-latest'
 ];
 
 export const generateCareAdvice = async (data: AssessmentData): Promise<string> => {
-  // 1. 強制檢查 API 金鑰
+  // 1. 取得並檢查 API 金鑰 (由系統環境注入)
   const apiKey = process.env.API_KEY;
+
   if (!apiKey || apiKey === 'undefined') {
-    throw new Error("系統偵測不到 API 金鑰。請確保環境變數 'API_KEY' 已正確配置。");
+    throw new Error("系統偵測不到 API 金鑰。請確認環境變數 'API_KEY' 配置正確。");
   }
 
-  const detectedCrisis = Object.entries(data.crisisAnswers)
+  // 2. 格式化評估數據
+  const detectedCrisis = Object.entries(data.crisisAnswers || {})
     .filter(([_, val]) => val === true)
     .map(([id]) => {
       const q = CRISIS_QUESTIONS.find(q => q.id === parseInt(id));
@@ -83,14 +88,15 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
 
   let lastError: any = null;
 
-  // 2. 開始嘗試模型序列
+  // 3. 執行備援迴圈
   for (const modelName of MODELS_TO_TRY) {
     try {
-      console.log(`[Gemini] 正在嘗試調用模型: ${modelName}`);
+      console.log(`[Gemini SDK] 正在嘗試呼叫模型: ${modelName}`);
       
+      // 規範：每次發起請求前初始化實例
       const ai = new GoogleGenAI({ apiKey });
       
-      // 只有 Gemini 3 系列與 2.5 系列支援 thinkingConfig
+      // 判斷是否支援思考功能 (3 系列與 2.5 系列)
       const supportsThinking = modelName.includes('gemini-3') || modelName.includes('gemini-2.5');
       
       const response = await ai.models.generateContent({
@@ -101,24 +107,28 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
           ...(supportsThinking ? { thinkingConfig: { thinkingBudget: 2000 } } : {})
         },
       });
-      
+
+      // 成功獲取結果 (使用 .text 屬性而非方法)
       if (response && response.text) {
-        console.log(`[Gemini] 模型 ${modelName} 成功回應！`);
+        console.log(`[Gemini SDK] 模型 ${modelName} 成功生成報告。`);
         return response.text;
       }
-    } catch (error: any) {
-      lastError = error;
-      console.warn(`[Gemini] 模型 ${modelName} 失敗: ${error.message}`);
       
-      // 如果是 API Key 錯誤，直接拋出不進入備援
-      if (error.message.includes('API_KEY_INVALID') || error.message.includes('403')) {
-        throw new Error("API 金鑰無效，請檢查 Google AI Studio 金鑰是否正確。");
+      throw new Error("模型回應內容為空");
+    } catch (err: any) {
+      lastError = err;
+      const errorMsg = err.message || "";
+      console.warn(`[Gemini SDK] 模型 ${modelName} 失敗: ${errorMsg}`);
+      
+      // 關鍵錯誤攔截：如果是 403 或金鑰無效，不需要重試其他模型
+      if (errorMsg.includes('403') || errorMsg.includes('API_KEY_INVALID') || errorMsg.includes('permission')) {
+        throw new Error("API 金鑰權限不足或無效。請確認您的 Google AI Studio 金鑰是否處於可用狀態且已綁定付費專案。");
       }
       
-      // 其他錯誤（如 404, 429, 500）繼續嘗試下一個模型
+      // 429 或其他網路錯誤則繼續下一個模型
     }
   }
 
-  // 3. 全數失敗
-  throw new Error(`所有模型嘗試均失敗。最後一項錯誤：${lastError?.message || "網路通訊異常"}`);
+  // 4. 全部失敗時的回報
+  throw new Error(`所有模型嘗試皆失敗。最後一項錯誤訊息：${lastError?.message || "網路連線異常，請稍後再試"}`);
 };
