@@ -67,36 +67,28 @@ export const calculateCrisisStatus = (crisisAnswers: Record<number, boolean>): R
   return 'Green';
 };
 
-/**
- * Heuristic logic to determine personality type based on scores and crisis answers
- */
 export const determinePersonalityType = (data: Partial<AssessmentData>): PersonalityType => {
   const dims = data.dimensions;
   const crisis = data.crisisAnswers || {};
   
   if (!dims) return '待觀察';
 
-  // 1. 掌控攻擊型: 管理維運成本高 + 行為問題或情緒不穩
   if (dims.management > dims.physical && (crisis[4] || crisis[10])) {
     return '掌控攻擊型';
   }
   
-  // 2. 焦慮敏感型: 心理風險高 + 頻繁情緒波動或睡眠障礙
   if (dims.mental > dims.physical && (crisis[4] || crisis[6])) {
     return '焦慮敏感型';
   }
 
-  // 3. 自我放逐型: 心理風險高 + 社交退縮或負向自我知覺
   if (dims.mental > 15 && (crisis[3] || crisis[5] || crisis[8])) {
     return '自我放逐型';
   }
 
-  // 4. 過度補償型: 照顧模式複雜度高但心理/衝突得分相對低 (裝強)
   if (dims.physical > 15 && crisis[2]) {
     return '過度補償型';
   }
 
-  // Default heuristic based on highest dimension
   const maxDim = Math.max(dims.physical, dims.family, dims.mental, dims.management);
   if (maxDim === dims.management) return '掌控攻擊型';
   if (maxDim === dims.mental) return '焦慮敏感型';

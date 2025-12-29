@@ -1,18 +1,25 @@
+
 import { GoogleGenAI } from "@google/genai";
 import { AssessmentData } from "../types";
 import { QUESTIONS, DIMENSION_NAMES, CRISIS_QUESTIONS } from "../constants";
 import { getDimensionRiskLevel } from "../utils/scoring";
 
 /**
- * 依照任務複雜度選擇適當模型
- * 複雜文本任務建議使用 gemini-3-pro-preview
+ * 依照使用者要求設定模型嘗試順序（Fallback Sequence）
+ * 當前一模型額度用盡或出錯時，依序嘗試
  */
-const MODEL_NAME = 'gemini-3-pro-preview';
+const MODELS_TO_TRY = [
+  'gemini-2.5-flash-latest',
+  'gemini-flash-lite-latest',
+  'gemini-2.5-flash-preview-tts',
+  'gemini-3-flash-preview',
+  'gemini-robotics-er-1.5-preview',
+  'gemma-3-12b'
+];
 
 export const generateCareAdvice = async (data: AssessmentData): Promise<string> => {
-  const apiKey = process.env.API_KEY;
-
-  if (!apiKey) {
+  // 直接使用環境變數中的 API_KEY
+  if (!process.env.API_KEY) {
     throw new Error("偵測不到 API 金鑰 (API_KEY is missing)。請確保系統環境變數配置正確。");
   }
 
@@ -39,11 +46,10 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
 
   const highestDimName = DIMENSION_NAMES[dims.indexOf(Math.max(...dims))];
   
-  const prompt = `
-**【角色與任務設定】**
-您是「共居住宅」的資深生活管家總管。請根據以下住戶數據生成專業分析報告。
-語氣：專業理性但溫暖。開頭請務必使用「您好。」
+  const systemInstruction = `您是「共居住宅」的資深生活管家總管。請根據以下住戶數據生成專業分析報告。
+語氣：專業理性但溫暖。開頭請務必使用「您好。」`;
 
+  const prompt = `
 **【個案資料】**
 * 姓名：${data.personalDetails.name} | 房間：${data.personalDetails.roomNumber || '未安排'}
 * 心理危機燈號：${data.crisisStatus} (檢出：${detectedCrisis || '無'})
@@ -76,21 +82,41 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
 - 「## 服務預期產生效益」
   `;
 
-  try {
-    const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: prompt,
-    });
-    
-    if (response && response.text) {
-      return response.text;
-    } else {
-      throw new Error("AI 回傳了空的結果");
+  let lastError: any = null;
+
+  // 遍歷所有指定的模型進行嘗試
+  for (const modelName of MODELS_TO_TRY) {
+    try {
+      console.log(`正在嘗試使用模型: ${modelName}`);
+      
+      // 規範要求：每次發起請求前都要新建 GoogleGenAI 實例
+      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      
+      // 只有 Gemini 3 和 2.5 系列支援 thinkingConfig
+      const supportsThinking = modelName.includes('gemini-3') || modelName.includes('gemini-2.5');
+      
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: prompt,
+        config: {
+          systemInstruction,
+          ...(supportsThinking ? { thinkingConfig: { thinkingBudget: 2000 } } : {})
+        },
+      });
+      
+      if (response && response.text) {
+        console.log(`模型 ${modelName} 成功生成報告。`);
+        return response.text;
+      }
+    } catch (error: any) {
+      lastError = error;
+      console.warn(`模型 ${modelName} 呼叫失敗，嘗試下一個。錯誤訊息: ${error.message}`);
+      
+      // 如果是因為 API Key 無效等不可恢復的錯誤，可能需要考慮是否繼續。
+      // 但根據使用者需求，我們依序嘗試完整個列表。
     }
-  } catch (error: any) {
-    const message = error.message || "未知錯誤";
-    console.error(`[API Error] ${message}`);
-    throw new Error(message);
   }
+
+  // 如果所有模型都失敗了
+  throw new Error(`所有模型 (${MODELS_TO_TRY.join(', ')}) 嘗試均失敗。最後一個錯誤: ${lastError?.message || "未知錯誤"}`);
 };

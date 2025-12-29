@@ -12,13 +12,22 @@ export interface PersonalDetails {
 
 export interface QuestionConfig {
   id: number;
+  part: string;
   text: string;
   weights: {
+    none: [number, number, number, number];
     low: [number, number, number, number];
     medium: [number, number, number, number];
     high: [number, number, number, number];
   };
   options: {
+    none: string;
+    low: string;
+    medium: string;
+    high: string;
+  };
+  descriptions: {
+    none: string;
     low: string;
     medium: string;
     high: string;
@@ -45,10 +54,10 @@ export interface ServiceItem {
 export interface AssessmentData {
   personalDetails: PersonalDetails;
   personBrief: string;
-  answers: Record<number, 'low' | 'medium' | 'high' | null>;
+  answers: Record<number, 'none' | 'low' | 'medium' | 'high' | null>;
   crisisAnswers: Record<number, boolean>;
   crisisStatus: RiskLevelType;
-  personalityType: PersonalityType; // Added personality type
+  personalityType: PersonalityType;
   qualitativeAnalysis: string;
   
   dimensions: {

@@ -1,8 +1,9 @@
-import React, { useEffect } from 'react';
-import { AssessmentData } from '../types';
+
+import React, { useEffect, useState } from 'react';
+import { AssessmentData, QuestionConfig } from '../types';
 import { QUESTIONS, CRISIS_QUESTIONS } from '../constants';
 import { calculateScores, calculateCrisisStatus, determinePersonalityType } from '../utils/scoring';
-import { PlayCircle, User, Activity, MessageSquare, FileText, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { PlayCircle, User, Activity, MessageSquare, FileText, AlertTriangle, ShieldAlert, Info } from 'lucide-react';
 
 interface Props {
   data: AssessmentData;
@@ -12,7 +13,8 @@ interface Props {
 }
 
 export const AssessmentForm: React.FC<Props> = ({ data, onChange, onGenerate, isLoading }) => {
-  
+  const [hoveredDescription, setHoveredDescription] = useState<Record<number, string>>({});
+
   useEffect(() => {
     const calculated = calculateScores(data.answers, data.personalDetails.age);
     const crisisStatus = calculateCrisisStatus(data.crisisAnswers);
@@ -33,10 +35,9 @@ export const AssessmentForm: React.FC<Props> = ({ data, onChange, onGenerate, is
     });
   };
 
-  const handleAnswerChange = (qId: number, value: 'low' | 'medium' | 'high' | '') => {
+  const handleAnswerChange = (qId: number, value: 'none' | 'low' | 'medium' | 'high' | null) => {
     const newAnswers = { ...data.answers };
-    if (value === '') delete newAnswers[qId];
-    else newAnswers[qId] = value;
+    newAnswers[qId] = value;
     onChange({ ...data, answers: newAnswers });
   };
 
@@ -47,18 +48,12 @@ export const AssessmentForm: React.FC<Props> = ({ data, onChange, onGenerate, is
     });
   };
 
-  const renderQuestionText = (text: string, id: number) => {
-    const match = text.match(/^([^（(]+)[（(](.+)[）)]$/) || text.match(/^([^（(]+)[（(](.+)$/) ;
-    if (match) {
-        return (
-            <div className="mb-3">
-                <span className="text-sm font-bold text-slate-800">{id}. {match[1]}</span>
-                <span className="block text-xs text-slate-500 mt-1 pl-4">{match[2].replace(/[）)]$/, '')}</span>
-            </div>
-        )
-    }
-    return <p className="text-sm font-medium text-slate-800 mb-3">{id}. {text}</p>;
-  };
+  // Group questions by part
+  const groupedQuestions = QUESTIONS.reduce((acc, q) => {
+    if (!acc[q.part]) acc[q.part] = [];
+    acc[q.part].push(q);
+    return acc;
+  }, {} as Record<string, QuestionConfig[]>);
 
   return (
     <div className="space-y-8">
@@ -136,7 +131,7 @@ export const AssessmentForm: React.FC<Props> = ({ data, onChange, onGenerate, is
           className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none transition-all"
           value={data.personBrief}
           onChange={(e) => onChange({...data, personBrief: e.target.value})}
-          placeholder="例如：王伯伯原本獨居，上週因在家浴室跌倒被鄰居發現，子女希望能安排有人看顧的環境..."
+          placeholder="例如：個案過往職業背景、家庭狀況簡述..."
         />
       </section>
 
@@ -163,7 +158,7 @@ export const AssessmentForm: React.FC<Props> = ({ data, onChange, onGenerate, is
         {data.crisisAnswers[10] && (
           <div className="bg-red-600 text-white p-3 rounded-lg text-sm font-bold mb-4 flex items-center animate-pulse">
             <ShieldAlert className="w-6 h-6 mr-2" />
-            偵測到關鍵題(Q10)危險：請立即啟動危機處理流程，移除危險物品並24小時不離人！
+            偵測到關鍵題(Q10)危險：請立即啟動危機處理流程！
           </div>
         )}
 
@@ -201,45 +196,61 @@ export const AssessmentForm: React.FC<Props> = ({ data, onChange, onGenerate, is
         </div>
       </section>
 
-      {/* 4. Assessment Matrix */}
+      {/* 4. Assessment Matrix with Sections */}
       <section>
-        <div className="flex items-center justify-between mb-4 mt-6">
-           <div className="flex items-center text-teal-700">
-            <Activity className="w-5 h-5 mr-2" />
-            <h3 className="font-semibold">風險評估量表 (30題)</h3>
-           </div>
+        <div className="flex items-center text-teal-700 mb-6 mt-6">
+          <Activity className="w-5 h-5 mr-2" />
+          <h3 className="font-semibold text-lg">風險評估量表 (30題)</h3>
         </div>
         
-        <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar border-t border-b border-slate-200 py-4">
-          {QUESTIONS.map((q) => (
-            <div key={q.id} className="bg-white p-4 rounded-lg border border-slate-100 shadow-sm">
-              {renderQuestionText(q.text, q.id)}
-              <div className="grid grid-cols-4 gap-2">
-                <button
-                  onClick={() => handleAnswerChange(q.id, '')}
-                  className={`text-xs py-2 px-1 rounded border h-full flex items-center justify-center ${!data.answers[q.id] ? 'bg-slate-100 border-slate-400 text-slate-600 font-bold' : 'border-slate-200 text-slate-400 hover:bg-slate-50'}`}
-                >
-                  無/未選
-                </button>
-                <button
-                  onClick={() => handleAnswerChange(q.id, 'low')}
-                  className={`text-xs py-2 px-1 rounded border h-full flex items-center justify-center text-center ${data.answers[q.id] === 'low' ? 'bg-green-100 border-green-500 text-green-700 font-bold' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-                >
-                  {q.options.low}
-                </button>
-                <button
-                  onClick={() => handleAnswerChange(q.id, 'medium')}
-                  className={`text-xs py-2 px-1 rounded border h-full flex items-center justify-center text-center ${data.answers[q.id] === 'medium' ? 'bg-yellow-100 border-yellow-500 text-yellow-700 font-bold' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-                >
-                  {q.options.medium}
-                </button>
-                <button
-                  onClick={() => handleAnswerChange(q.id, 'high')}
-                  className={`text-xs py-2 px-1 rounded border h-full flex items-center justify-center text-center ${data.answers[q.id] === 'high' ? 'bg-red-100 border-red-500 text-red-700 font-bold' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-                >
-                  {q.options.high}
-                </button>
-              </div>
+        <div className="space-y-10 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar border-t border-b border-slate-200 py-6">
+          {Object.entries(groupedQuestions).map(([partName, questions]) => (
+            <div key={partName} className="space-y-4">
+              <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] border-l-4 border-teal-500 pl-3 mb-4">
+                {partName}
+              </h4>
+              {questions.map((q) => (
+                <div key={q.id} className="bg-white p-4 rounded-xl border border-slate-100 shadow-sm transition-all hover:shadow-md">
+                  <p className="text-sm font-bold text-slate-800 mb-3">{q.id}. {q.text}</p>
+                  
+                  <div className="grid grid-cols-4 gap-2">
+                    {(['none', 'low', 'medium', 'high'] as const).map((level) => (
+                      <button
+                        key={level}
+                        onMouseEnter={() => setHoveredDescription(prev => ({ ...prev, [q.id]: q.descriptions[level] }))}
+                        onMouseLeave={() => setHoveredDescription(prev => {
+                            const next = {...prev};
+                            delete next[q.id];
+                            return next;
+                        })}
+                        onClick={() => handleAnswerChange(q.id, level)}
+                        className={`text-xs py-2.5 px-1 rounded-lg border font-bold transition-all h-full flex flex-col items-center justify-center text-center leading-tight
+                          ${data.answers[q.id] === level 
+                            ? level === 'none' ? 'bg-slate-100 border-slate-500 text-slate-700 shadow-inner' :
+                              level === 'low' ? 'bg-green-100 border-green-500 text-green-700 shadow-inner' :
+                              level === 'medium' ? 'bg-yellow-100 border-yellow-500 text-yellow-800 shadow-inner' :
+                              'bg-red-100 border-red-500 text-red-700 shadow-inner'
+                            : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:border-slate-300'
+                          }`}
+                      >
+                        {q.options[level]}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Dynamic Tooltip/Description Area */}
+                  <div className={`mt-3 p-2.5 rounded-lg border transition-all duration-200 flex items-start ${
+                    hoveredDescription[q.id] 
+                      ? 'bg-teal-50 border-teal-100 opacity-100 translate-y-0' 
+                      : 'bg-slate-50 border-transparent opacity-40 translate-y-1'
+                  }`}>
+                    <Info className={`w-3.5 h-3.5 mr-2 mt-0.5 shrink-0 ${hoveredDescription[q.id] ? 'text-teal-600' : 'text-slate-300'}`} />
+                    <span className={`text-[11px] leading-relaxed italic ${hoveredDescription[q.id] ? 'text-teal-800 font-medium' : 'text-slate-400'}`}>
+                      {hoveredDescription[q.id] || "游標懸停選項可查看詳細說明文字"}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           ))}
         </div>
