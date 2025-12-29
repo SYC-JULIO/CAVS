@@ -5,12 +5,20 @@ import { QUESTIONS, DIMENSION_NAMES, CRISIS_QUESTIONS } from "../constants";
 import { getDimensionRiskLevel } from "../utils/scoring";
 
 /**
- * 依照使用者要求，固定使用 gemini-2.5-flash-lite-latest
+ * 依照使用者要求設定模型循環序列
  */
-const TARGET_MODEL = 'gemini-2.5-flash-lite-latest';
+const MODELS_FALLBACK = [
+  'gemini-2.5-flash-latest',
+  'gemini-2.5-flash-lite-latest',
+  'gemini-2.5-flash-preview-tts',
+  'gemini-3-flash-preview',
+  'gemini-robotics-er-1.5-preview',
+  'gemma-3-12b'
+];
 
 export const generateCareAdvice = async (data: AssessmentData): Promise<string> => {
-  // 建立分析所需的上下文資訊
+  const apiKey = process.env.API_KEY;
+
   const detectedCrisis = Object.entries(data.crisisAnswers)
     .filter(([_, val]) => val === true)
     .map(([id]) => {
@@ -53,44 +61,38 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
 2. **風險管理策略**：結合最高風險面向「${highestDimName}」，標註**粗體安全警示**項目。
 3. **服務預期產生效益**：
    * 格式：◆[潛在問題]：藉由[管家介入手段]，期待[改善效益]。
-   * ⚠️ 禁語：嚴格禁止出現「護理」、「照護」、「醫療」、「護士」等醫療領域詞彙。請改用「生活協助」、「管家介入」、「生理支持」等。
+   * ⚠️ 禁語：嚴格禁止出現「照護」、「醫療」等醫療詞彙。請改用「生活協助」、「管家介入」等。
   `;
 
-  try {
-    // 嚴格遵守規範：每次呼叫前建立新的實例，並使用 process.env.API_KEY
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    
-    const response = await ai.models.generateContent({
-      model: TARGET_MODEL,
-      contents: prompt,
-    });
-    
-    if (response && response.text) {
-      return response.text;
-    } else {
-      throw new Error("模型回傳內容異常，請稍後再試。");
-    }
-  } catch (error: any) {
-    console.error(`[Gemini SDK Error]`, error);
-    
-    const errorStr = error.toString().toLowerCase();
-    
-    // 識別是否為 API Key 相關問題
-    if (
-      errorStr.includes("api key") || 
-      errorStr.includes("401") || 
-      errorStr.includes("403") ||
-      errorStr.includes("unauthorized") ||
-      errorStr.includes("not found")
-    ) {
-      throw new Error("AUTH_REQUIRED");
-    }
-    
-    // 識別配額問題
-    if (errorStr.includes("429") || errorStr.includes("quota")) {
-      throw new Error("免費額度已達上限或請求過於頻繁，請稍候。");
-    }
+  // 嘗試循環模型
+  for (let i = 0; i < MODELS_FALLBACK.length; i++) {
+    const currentModel = MODELS_FALLBACK[i];
+    try {
+      const ai = new GoogleGenAI({ apiKey });
+      const response = await ai.models.generateContent({
+        model: currentModel,
+        contents: prompt,
+      });
+      
+      if (response && response.text) {
+        return response.text;
+      }
+    } catch (error: any) {
+      console.warn(`[Model Fallback] ${currentModel} failed, trying next...`, error);
+      const errorStr = error.toString().toLowerCase();
+      
+      // 如果是授權問題 (401/403)，直接拋出以便 App 處理
+      if (errorStr.includes("api key") || errorStr.includes("401") || errorStr.includes("unauthorized")) {
+        throw new Error("AUTH_REQUIRED");
+      }
 
-    throw new Error(error.message || "分析過程中發生未知異常。");
+      // 如果不是最後一個模型，且錯誤是配額或暫時性錯誤，則繼續嘗試下一個
+      if (i < MODELS_FALLBACK.length - 1) {
+        continue; 
+      }
+    }
   }
+
+  // 若所有模型都嘗試失敗
+  throw new Error("今日免費額度已用完，請聯繫工作人員");
 };

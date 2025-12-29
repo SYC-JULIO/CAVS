@@ -4,7 +4,7 @@ import { AssessmentForm } from './components/AssessmentForm';
 import { ReportViewer } from './components/ReportViewer';
 import { generateCareAdvice } from './services/geminiService';
 import { AssessmentData } from './types';
-import { Activity, AlertCircle, Clock, HelpCircle, Key } from 'lucide-react';
+import { Activity, AlertCircle, Clock, HelpCircle } from 'lucide-react';
 
 const INITIAL_DATA: AssessmentData = {
   personalDetails: { name: '', gender: '', age: '', contact: '', roomNumber: '' },
@@ -32,32 +32,13 @@ const App: React.FC = () => {
     setReport(null);
     
     try {
-      // 檢查是否已選擇 API 金鑰，若無則啟動選擇對話框
-      // @ts-ignore
-      if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
-        // @ts-ignore
-        const hasKey = await window.aistudio.hasSelectedApiKey();
-        if (!hasKey) {
-          // @ts-ignore
-          await window.aistudio.openSelectKey();
-          // 觸發選擇後繼續執行，不中斷
-        }
-      }
-
       const result = await generateCareAdvice(data);
       setReport(result);
     } catch (err: any) {
       console.error("Operation Failed:", err);
       
       if (err.message === "AUTH_REQUIRED") {
-        // @ts-ignore
-        if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
-           // @ts-ignore
-           await window.aistudio.openSelectKey();
-           setError("請點擊上方金鑰圖示，選擇具備權限的 API 金鑰後再次嘗試。");
-        } else {
-           setError("未偵測到有效的 API_KEY。請確認環境變數已正確注入或金鑰未過期。");
-        }
+        setError("API 金鑰授權失敗，請確認環境設定。");
         setIsLoading(false);
         return;
       }
@@ -65,7 +46,7 @@ const App: React.FC = () => {
       const errorMessage = err.message || '連線逾時，請檢查網路狀態。';
       if (errorMessage.includes('額度') || errorMessage.includes('429')) {
           setIsQuotaError(true);
-          setError("當前免費配額已用完，請稍候重試。");
+          setError("今日免費額度已用完，請聯繫工作人員");
       } else {
           setError(errorMessage);
       }
@@ -88,16 +69,13 @@ const App: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center space-x-4">
-            <button 
-              onClick={() => {
-                // @ts-ignore
-                if (window.aistudio) window.aistudio.openSelectKey();
-              }}
-              className="flex items-center space-x-2 px-3 py-1.5 border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50 hover:text-teal-600 transition-all text-xs font-bold"
-            >
-              <Key className="w-4 h-4" />
-              <span>設定金鑰</span>
-            </button>
+            <div className="hidden md:flex items-center text-slate-400 text-xs font-bold tracking-tighter">
+              <span>住戶狀態評估</span>
+              <span className="mx-2 text-slate-200">|</span>
+              <span>心理狀態評估</span>
+              <span className="mx-2 text-slate-200">|</span>
+              <span className="text-teal-600">決策支援</span>
+            </div>
             <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>
             <HelpCircle className="w-5 h-5 text-slate-300 cursor-help hover:text-teal-600 transition-colors" />
           </div>
