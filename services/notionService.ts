@@ -1,8 +1,28 @@
 
-// 此功能已移除
-// This service file is deprecated as per user request to remove direct Notion API integration.
-// Content has been cleared to prevent misuse.
+/**
+ * Notion 整合服務 (透過 Make.com Webhook)
+ */
+export const sendToMakeWebhook = async (webhookUrl: string, payload: any) => {
+  if (!webhookUrl) {
+    throw new Error("請先輸入 Make.com Webhook URL");
+  }
 
-export const saveToNotion = async () => {
-    throw new Error("Feature deprecated");
+  const response = await fetch(webhookUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      ...payload,
+      timestamp: new Date().toISOString(),
+      source: 'Resident Assessment System'
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`匯出失敗: ${response.status} ${errorText}`);
+  }
+
+  return true;
 };

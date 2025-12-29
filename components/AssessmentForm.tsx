@@ -1,9 +1,9 @@
 
 import React, { useEffect } from 'react';
 import { AssessmentData } from '../types';
-import { QUESTIONS } from '../constants';
-import { calculateScores, getRiskColorClass } from '../utils/scoring';
-import { PlayCircle, User, Activity, MessageSquare, FileText } from 'lucide-react';
+import { QUESTIONS, CRISIS_QUESTIONS } from '../constants';
+import { calculateScores, calculateCrisisStatus } from '../utils/scoring';
+import { PlayCircle, User, Activity, MessageSquare, FileText, AlertTriangle, ShieldAlert } from 'lucide-react';
 
 interface Props {
   data: AssessmentData;
@@ -14,24 +14,16 @@ interface Props {
 
 export const AssessmentForm: React.FC<Props> = ({ data, onChange, onGenerate, isLoading }) => {
   
-  // Real-time recalculation when answers OR age change
   useEffect(() => {
     const calculated = calculateScores(data.answers, data.personalDetails.age);
+    const crisisStatus = calculateCrisisStatus(data.crisisAnswers);
     
-    // Check if score actually changed to prevent loops, but also update if just dimensions changed
-    const dimsChanged = 
-        calculated.dimensions.physical !== data.dimensions.physical ||
-        calculated.dimensions.family !== data.dimensions.family ||
-        calculated.dimensions.mental !== data.dimensions.mental ||
-        calculated.dimensions.management !== data.dimensions.management;
-
-    if (calculated.totalScore !== data.totalScore || dimsChanged) {
-      onChange({
-        ...data,
-        ...calculated
-      });
-    }
-  }, [data.answers, data.personalDetails.age]);
+    onChange({
+      ...data,
+      ...calculated,
+      crisisStatus
+    });
+  }, [data.answers, data.personalDetails.age, data.crisisAnswers]);
 
   const handlePersonalChange = (field: keyof AssessmentData['personalDetails'], value: string) => {
     onChange({
@@ -42,19 +34,20 @@ export const AssessmentForm: React.FC<Props> = ({ data, onChange, onGenerate, is
 
   const handleAnswerChange = (qId: number, value: 'low' | 'medium' | 'high' | '') => {
     const newAnswers = { ...data.answers };
-    if (value === '') {
-      delete newAnswers[qId];
-    } else {
-      newAnswers[qId] = value;
-    }
+    if (value === '') delete newAnswers[qId];
+    else newAnswers[qId] = value;
     onChange({ ...data, answers: newAnswers });
   };
 
-  // Helper to split question text into Main and Subtitle (content in parens)
+  const handleCrisisChange = (qId: number, value: boolean) => {
+    onChange({
+      ...data,
+      crisisAnswers: { ...data.crisisAnswers, [qId]: value }
+    });
+  };
+
   const renderQuestionText = (text: string, id: number) => {
-    // Regex to capture text before first ( or （
     const match = text.match(/^([^（(]+)[（(](.+)[）)]$/) || text.match(/^([^（(]+)[（(](.+)$/) ;
-    
     if (match) {
         return (
             <div className="mb-3">
@@ -83,6 +76,16 @@ export const AssessmentForm: React.FC<Props> = ({ data, onChange, onGenerate, is
               className="w-full border border-slate-300 rounded p-2 text-sm"
               value={data.personalDetails.name}
               onChange={e => handlePersonalChange('name', e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">房間號碼 (若無請留空)</label>
+            <input 
+              type="text" 
+              className="w-full border border-slate-300 rounded p-2 text-sm"
+              value={data.personalDetails.roomNumber}
+              onChange={e => handlePersonalChange('roomNumber', e.target.value)}
+              placeholder="例如：302-A"
             />
           </div>
           <div className="grid grid-cols-2 gap-2">
@@ -121,13 +124,12 @@ export const AssessmentForm: React.FC<Props> = ({ data, onChange, onGenerate, is
         </div>
       </section>
 
-      {/* 2. Person Brief (New Section) */}
+      {/* 2. Person Brief */}
       <section className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
         <div className="flex items-center mb-2 text-teal-700">
           <FileText className="w-5 h-5 mr-2" />
-          <h3 className="font-semibold">人物簡述與事件描述</h3>
+          <h3 className="font-semibold">人物簡述或其他事件描述</h3>
         </div>
-        <p className="text-xs text-slate-500 mb-3">請簡述個案背景、當前主要問題或近期發生的關鍵事件。</p>
         <textarea
           rows={3}
           className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-teal-500 outline-none transition-all"
@@ -137,14 +139,73 @@ export const AssessmentForm: React.FC<Props> = ({ data, onChange, onGenerate, is
         />
       </section>
 
-      {/* 3. Assessment Matrix */}
+      {/* 3. Psychological Crisis Assessment (NEW) */}
+      <section className={`p-5 rounded-xl border transition-colors duration-300 ${
+        data.crisisStatus === 'Red' ? 'bg-red-50 border-red-200' : 
+        data.crisisStatus === 'Yellow' ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'
+      }`}>
+        <div className="flex items-center justify-between mb-2">
+          <div className={`flex items-center font-bold ${data.crisisStatus === 'Red' ? 'text-red-700' : 'text-slate-700'}`}>
+            {data.crisisStatus === 'Red' ? <ShieldAlert className="w-5 h-5 mr-2" /> : <AlertTriangle className="w-5 h-5 mr-2" />}
+            心理危機判定 (10題)
+          </div>
+          <div className={`text-xs font-bold px-2 py-1 rounded ${
+            data.crisisStatus === 'Red' ? 'bg-red-600 text-white' : 
+            data.crisisStatus === 'Yellow' ? 'bg-amber-500 text-white' : 'bg-green-600 text-white'
+          }`}>
+            目前狀態：{data.crisisStatus === 'Red' ? '🔴 高度風險' : data.crisisStatus === 'Yellow' ? '🟡 中度風險' : '🟢 穩定'}
+          </div>
+        </div>
+        <p className="text-xs text-slate-500 mb-4">請依個案近兩週狀態回答「是」或「否」。</p>
+
+        {data.crisisAnswers[10] && (
+          <div className="bg-red-600 text-white p-3 rounded-lg text-sm font-bold mb-4 flex items-center animate-pulse">
+            <ShieldAlert className="w-6 h-6 mr-2" />
+            偵測到關鍵題(Q10)危險：請立即啟動危機處理流程，移除危險物品並24小時不離人！
+          </div>
+        )}
+
+        <div className="space-y-3">
+          {CRISIS_QUESTIONS.map((q) => (
+            <div key={q.id} className="bg-white p-3 rounded-lg border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block mb-0.5">{q.category}</span>
+                <p className="text-sm text-slate-800">{q.id}. {q.text}</p>
+              </div>
+              <div className="flex gap-2 shrink-0">
+                <button
+                  onClick={() => handleCrisisChange(q.id, true)}
+                  className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${
+                    data.crisisAnswers[q.id] === true 
+                      ? 'bg-red-600 text-white shadow-md' 
+                      : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                  }`}
+                >
+                  是
+                </button>
+                <button
+                  onClick={() => handleCrisisChange(q.id, false)}
+                  className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-sm font-bold transition-all ${
+                    data.crisisAnswers[q.id] === false 
+                      ? 'bg-green-600 text-white shadow-md' 
+                      : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                  }`}
+                >
+                  否
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 4. Assessment Matrix */}
       <section>
         <div className="flex items-center justify-between mb-4 mt-6">
            <div className="flex items-center text-teal-700">
             <Activity className="w-5 h-5 mr-2" />
-            <h3 className="font-semibold">評估量表 (30題)</h3>
+            <h3 className="font-semibold">風險評估量表 (30題)</h3>
            </div>
-           {/* Score display removed to prevent user anxiety */}
         </div>
         
         <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar border-t border-b border-slate-200 py-4">
@@ -182,7 +243,7 @@ export const AssessmentForm: React.FC<Props> = ({ data, onChange, onGenerate, is
         </div>
       </section>
 
-      {/* 4. Qualitative Input */}
+      {/* 5. Qualitative Input */}
       <section>
         <div className="flex items-center mb-2 text-teal-700">
           <MessageSquare className="w-5 h-5 mr-2" />
@@ -212,12 +273,12 @@ export const AssessmentForm: React.FC<Props> = ({ data, onChange, onGenerate, is
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            生成分析報告...
+            分析中，請稍候...
           </>
         ) : (
           <>
             <PlayCircle className="w-6 h-6 mr-2" />
-            生成照顧建議與服務報價
+            生成全面分析報告
           </>
         )}
       </button>

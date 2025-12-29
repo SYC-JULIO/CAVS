@@ -1,3 +1,4 @@
+
 import { QUESTIONS } from '../constants';
 import { AssessmentData, RiskLevelType } from '../types';
 
@@ -6,9 +7,8 @@ export const calculateScores = (answers: AssessmentData['answers'], ageString: s
   totalScore: number;
   riskLevel: RiskLevelType;
 } => {
-  const dims = [0, 0, 0, 0]; // 0: Physical, 1: Family, 2: Mental, 3: Management
+  const dims = [0, 0, 0, 0]; 
 
-  // 1. Calculate Base Scores from Answers
   Object.entries(answers).forEach(([qIdStr, level]) => {
     if (!level) return;
     const qId = parseInt(qIdStr);
@@ -22,35 +22,24 @@ export const calculateScores = (answers: AssessmentData['answers'], ageString: s
     }
   });
 
-  // 2. Calculate Age Bonus
-  // Rule: If Age > 65, add 1 point to EACH dimension for every 5 full years over 65.
   const age = parseInt(ageString);
   let ageBonus = 0;
   if (!isNaN(age) && age > 65) {
     ageBonus = Math.floor((age - 65) / 5);
   }
 
-  // Apply bonus to all dimensions
   dims[0] += ageBonus;
   dims[1] += ageBonus;
   dims[2] += ageBonus;
   dims[3] += ageBonus;
 
   const totalScore = dims.reduce((a, b) => a + b, 0);
-  
-  // Calculate max dimension score to determine overall risk
   const maxDimScore = Math.max(...dims);
 
   let riskLevel: RiskLevelType = 'Green';
-  
-  // Logic: 0-10 Green, 11-25 Yellow, 26+ Red
-  if (maxDimScore >= 26) {
-    riskLevel = 'Red';
-  } else if (maxDimScore >= 11) {
-    riskLevel = 'Yellow';
-  } else {
-    riskLevel = 'Green';
-  }
+  if (maxDimScore >= 26) riskLevel = 'Red';
+  else if (maxDimScore >= 11) riskLevel = 'Yellow';
+  else riskLevel = 'Green';
 
   return {
     dimensions: {
@@ -62,6 +51,29 @@ export const calculateScores = (answers: AssessmentData['answers'], ageString: s
     totalScore,
     riskLevel,
   };
+};
+
+export const calculateCrisisStatus = (crisisAnswers: Record<number, boolean>): RiskLevelType => {
+  const yesCount = Object.values(crisisAnswers).filter(v => v === true).length;
+  
+  // 🔴 紅燈條件
+  // 1. Q10 (計畫) 為「是」 ➔ 直接紅燈
+  if (crisisAnswers[10]) return 'Red';
+  // 2. Q9 (主動意念) 為「是」 且 Q1 (剛出院) 或 Q2 (強勢受挫) 為「是」
+  if (crisisAnswers[9] && (crisisAnswers[1] || crisisAnswers[2])) return 'Red';
+  // 3. 總題數回答「是」超過 6 題
+  if (yesCount > 6) return 'Red';
+
+  // 🟡 黃燈條件
+  // 1. Q9 (主動意念) 為「是」 但無具體計畫
+  if (crisisAnswers[9]) return 'Yellow';
+  // 2. Q8 (被動意念) 為「是」
+  if (crisisAnswers[8]) return 'Yellow';
+  // 3. Q1 至 Q7 中，回答「是」達 3~5 題
+  if (yesCount >= 3 && yesCount <= 5) return 'Yellow';
+
+  // 🟢 綠燈條件 (Q9, Q10必須為否且Yes數 0-2)
+  return 'Green';
 };
 
 export const getRiskColorClass = (level: RiskLevelType) => {

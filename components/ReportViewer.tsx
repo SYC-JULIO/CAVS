@@ -1,23 +1,30 @@
 
 import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Bot, FileText, Printer, Copy, Check, Table } from 'lucide-react';
+import { Bot, FileText, Printer, Check, ShieldAlert, AlertTriangle, ShieldCheck, Share, Link, Loader2 } from 'lucide-react';
 import { AssessmentData, SelectedService } from '../types';
 import { RadarChart } from './RadarChart';
 import { ServiceCalculator } from './ServiceCalculator';
 import { SERVICES_CATALOG, DIMENSION_NAMES } from '../constants';
+import { sendToMakeWebhook } from '../services/notionService';
 
 interface Props {
   report: string | null;
   isLoading: boolean;
-  data: AssessmentData; // Pass full data for chart and calculator
+  data: AssessmentData; 
 }
 
 export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
-  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied'>('idle');
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
+  const [webhookUrl, setWebhookUrl] = useState<string>(localStorage.getItem('make_webhook_url') || '');
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportStatus, setExportStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-  // Effect to initialize recommended services when data changes (logic moved from ServiceCalculator)
+  // Sync webhook URL to local storage for convenience
+  useEffect(() => {
+    localStorage.setItem('make_webhook_url', webhookUrl);
+  }, [webhookUrl]);
+
   useEffect(() => {
     const scores = [
       data.dimensions.physical,
@@ -26,33 +33,25 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
       data.dimensions.management
     ];
     
-    // Determine active dimensions (score > 10 is Yellow/Red)
     const activeDimIndices = scores
       .map((score, idx) => score > 10 ? idx : -1)
       .filter(idx => idx !== -1);
 
     const initialServices = SERVICES_CATALOG
       .filter(service => service.recommendedFor.some(dimIdx => activeDimIndices.includes(dimIdx)))
-      // Exclude Service Packages (pkg1, pkg2, pkg3) from auto-selection
       .filter(service => !['pkg1', 'pkg2', 'pkg3'].includes(service.id))
       .map(service => ({
         ...service,
         dailyFreq: service.defaultQuantity,
-        monthlyDays: 30 // Default full month
+        monthlyDays: 30 
       }));
       
-    // Remove duplicates
     let uniqueServices = Array.from(new Map(initialServices.map(item => [item.id, item])).values());
-    
-    // Mutual Exclusion: s_meal vs s_meal_single
-    // If both are present, prioritize s_meal (Daily) and remove s_meal_single
     const hasMeal = uniqueServices.some(s => s.id === 's_meal');
-    if (hasMeal) {
-        uniqueServices = uniqueServices.filter(s => s.id !== 's_meal_single');
-    }
+    if (hasMeal) uniqueServices = uniqueServices.filter(s => s.id !== 's_meal_single');
 
     setSelectedServices(uniqueServices);
-  }, [data.dimensions]); // Dependency on dimensions
+  }, [data.dimensions]);
 
   if (isLoading) {
     return (
@@ -63,7 +62,7 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
           <div className="h-3 bg-slate-200 rounded w-5/6"></div>
           <div className="h-3 bg-slate-200 rounded w-4/6"></div>
         </div>
-        <p className="text-slate-400 text-sm font-medium">AI 正在分析問卷數據並規劃建議...</p>
+        <p className="text-slate-400 text-sm font-medium">AI 正在整合風險評估與心理危機數據...</p>
       </div>
     );
   }
@@ -75,128 +74,151 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
           <FileText className="w-8 h-8 text-slate-300" />
         </div>
         <p>尚未生成報告</p>
-        <p className="text-sm mt-2">請填寫左側完整問卷後點擊「生成」</p>
+        <p className="text-sm mt-2">請完成評估量表與心理危機判定</p>
       </div>
     );
   }
 
-  const handleCopyReport = async () => {
-    if (!report) return;
-    try {
-        await navigator.clipboard.writeText(report);
-        setCopyStatus('copied');
-        setTimeout(() => setCopyStatus('idle'), 2000);
-    } catch (err) {
-        console.error('Failed to copy', err);
-        alert('複製失敗，請手動選取文字複製。');
+  const handleExportToNotion = async () => {
+    if (!webhookUrl) {
+      alert("請先填入 Make.com Webhook URL");
+      return;
     }
-  };
 
-  const handleExportCSV = () => {
-    // 1. Prepare Data
-    // Calculate total cost
+    setIsExporting(true);
+    setExportStatus('idle');
+
+    // Calculate total for payload
     let monthlyTotal = 0;
-    const servicesList = selectedServices.map(s => {
-        let cost = 0;
-        if (s.calculationBasis === 'per_month') {
-            const dailyUnitPrice = s.unit === '月' ? s.price / 30 : s.price;
-            cost = dailyUnitPrice * s.dailyFreq * s.monthlyDays;
-        } else {
-            cost = s.price * s.dailyFreq * s.monthlyDays;
+    selectedServices.forEach(s => {
+      const dailyUnitPrice = s.unit === '月' ? s.price / 30 : s.price;
+      monthlyTotal += dailyUnitPrice * s.dailyFreq * s.monthlyDays;
+    });
+
+    const payload = {
+      resident_info: {
+        name: data.personalDetails.name,
+        room: data.personalDetails.roomNumber,
+        age: data.personalDetails.age,
+        gender: data.personalDetails.gender,
+        contact: data.personalDetails.contact
+      },
+      assessment: {
+        total_score: data.totalScore,
+        risk_level: data.riskLevel,
+        crisis_status: data.crisisStatus,
+        dimensions: {
+          physical: data.dimensions.physical,
+          family: data.dimensions.family,
+          mental: data.dimensions.mental,
+          management: data.dimensions.management
         }
-        monthlyTotal += cost;
-        return `${s.name}(${s.dailyFreq}${s.unit}/日, ${s.monthlyDays}天)`;
-    }).join('; ');
+      },
+      ai_report: report,
+      services: {
+        items: selectedServices.map(s => ({
+          name: s.name,
+          qty: s.dailyFreq,
+          unit: s.unit,
+          days: s.monthlyDays,
+          subtotal: Math.round((s.unit === '月' ? s.price/30 : s.price) * s.dailyFreq * s.monthlyDays)
+        })),
+        monthly_total: Math.round(monthlyTotal)
+      }
+    };
 
-    const headers = [
-        '姓名', '性別', '年齡', '總分', '風險等級',
-        DIMENSION_NAMES[0], DIMENSION_NAMES[1], DIMENSION_NAMES[2], DIMENSION_NAMES[3],
-        '加值服務清單', '預估月費'
-    ];
-
-    const row = [
-        data.personalDetails.name,
-        data.personalDetails.gender,
-        data.personalDetails.age,
-        data.totalScore,
-        data.riskLevel,
-        data.dimensions.physical,
-        data.dimensions.family,
-        data.dimensions.mental,
-        data.dimensions.management,
-        `"${servicesList}"`, // Quote to handle commas/semicolons
-        monthlyTotal
-    ];
-
-    // 2. Generate CSV Content with BOM for Excel UTF-8 support
-    const csvContent = "\uFEFF" + [
-        headers.join(','),
-        row.join(',')
-    ].join('\n');
-
-    // 3. Trigger Download
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', `評估報告_${data.personalDetails.name}_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const getTodayDate = () => {
-    const today = new Date();
-    return `${today.getFullYear()}/${String(today.getMonth() + 1).padStart(2, '0')}/${String(today.getDate()).padStart(2, '0')}`;
+    try {
+      await sendToMakeWebhook(webhookUrl, payload);
+      setExportStatus('success');
+      setTimeout(() => setExportStatus('idle'), 3000);
+    } catch (err: any) {
+      console.error(err);
+      alert(err.message);
+      setExportStatus('error');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
     <div className="max-w-none relative pb-10">
       
-      {/* Action Buttons */}
-      <div className="flex justify-end gap-2 mb-4 print:hidden">
-         <button 
-           onClick={handleCopyReport}
-           className={`flex items-center text-sm px-3 py-1.5 rounded transition-colors border shadow-sm
-             ${copyStatus === 'copied' 
-                ? 'bg-green-50 border-green-200 text-green-700' 
-                : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-600'
-             }`}
-           title="複製報告內容 (Markdown 格式)，可直接貼上至 Notion"
-         >
-           {copyStatus === 'copied' ? (
-             <Check className="w-4 h-4 mr-1" />
-           ) : (
-             <Copy className="w-4 h-4 mr-1" />
-           )}
-           {copyStatus === 'copied' ? '已複製' : '複製內容'}
-         </button>
-         
-         <button 
-            onClick={handleExportCSV}
-            className="flex items-center text-sm bg-white border border-slate-200 px-3 py-1.5 rounded hover:bg-slate-50 text-slate-600 transition-colors"
-            title="匯出為 Excel 可讀格式 (.csv)"
-         >
-            <Table className="w-4 h-4 mr-1 text-green-700" />
-            匯出試算表
-         </button>
+      {/* Webhook Configuration & Toolbar */}
+      <div className="space-y-4 mb-6 print:hidden">
+        {/* Webhook URL Input Space */}
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-col sm:flex-row gap-3 items-center">
+          <div className="flex items-center text-slate-500 shrink-0">
+            <Link className="w-4 h-4 mr-2" />
+            <span className="text-xs font-bold uppercase tracking-wider">Webhook 設定</span>
+          </div>
+          <input 
+            type="text"
+            placeholder="在此貼上 Make.com Webhook URL (例如 https://hook.us1.make.com/...)"
+            className="flex-1 text-xs border border-slate-300 rounded px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500"
+            value={webhookUrl}
+            onChange={(e) => setWebhookUrl(e.target.value)}
+          />
+        </div>
 
-         <button 
-            onClick={() => window.print()} 
-            className="flex items-center text-sm bg-teal-600 text-white px-3 py-1.5 rounded hover:bg-teal-700 transition-colors shadow-sm"
-         >
-            <Printer className="w-4 h-4 mr-1" />
-            列印 / PDF
-         </button>
+        <div className="flex justify-between items-center">
+          <button onClick={() => window.print()} className="flex items-center text-sm bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
+            <Printer className="w-4 h-4 mr-2" />
+            列印報告 / PDF
+          </button>
+
+          <button 
+            onClick={handleExportToNotion}
+            disabled={isExporting}
+            className={`flex items-center text-sm font-bold px-5 py-2 rounded-lg transition-all shadow-md active:scale-95 ${
+              exportStatus === 'success' 
+                ? 'bg-green-600 text-white' 
+                : isExporting 
+                  ? 'bg-slate-400 text-white cursor-not-allowed'
+                  : 'bg-teal-700 text-white hover:bg-teal-800'
+            }`}
+          >
+            {isExporting ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : exportStatus === 'success' ? (
+              <Check className="w-4 h-4 mr-2" />
+            ) : (
+              <Share className="w-4 h-4 mr-2" />
+            )}
+            {isExporting ? '匯出中...' : exportStatus === 'success' ? '已成功匯出至 Notion' : '確認並匯出到 Notion'}
+          </button>
+        </div>
       </div>
 
-      {/* Visual Analytics */}
+      {/* 心理危機快速預警看板 */}
+      <div className={`mb-6 p-4 rounded-xl border-2 flex items-center gap-4 ${
+        data.crisisStatus === 'Red' ? 'bg-red-50 border-red-200 text-red-800' :
+        data.crisisStatus === 'Yellow' ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-green-50 border-green-200 text-green-800'
+      }`}>
+        <div className={`p-3 rounded-full ${
+          data.crisisStatus === 'Red' ? 'bg-red-200' :
+          data.crisisStatus === 'Yellow' ? 'bg-amber-200' : 'bg-green-200'
+        }`}>
+          {data.crisisStatus === 'Red' ? <ShieldAlert className="w-8 h-8 text-red-600" /> : 
+           data.crisisStatus === 'Yellow' ? <AlertTriangle className="w-8 h-8 text-amber-600" /> : <ShieldCheck className="w-8 h-8 text-green-600" />}
+        </div>
+        <div>
+          <h3 className="font-black text-lg">心理危機判定：{
+            data.crisisStatus === 'Red' ? '高度危險 (立即介入)' : 
+            data.crisisStatus === 'Yellow' ? '中度風險 (密切觀察)' : '穩定 (持續監測)'
+          }</h3>
+          <p className="text-sm opacity-90 font-medium">
+            {data.crisisStatus === 'Red' ? '指令：通知家屬，24小時不離人，移除危險物品。' : 
+             data.crisisStatus === 'Yellow' ? '指令：增加訪視頻率，與家屬建立聯繫網。' : '狀態：維持常規關懷與情緒支持。'}
+          </p>
+        </div>
+      </div>
+
       <RadarChart dimensions={data.dimensions} />
 
       <div className="prose prose-slate prose-headings:text-teal-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700 max-w-none">
         <div className="flex items-center space-x-2 mb-6 pb-4 border-b border-slate-100">
           <Bot className="w-5 h-5 text-teal-600" />
-          <span className="text-xs font-semibold text-teal-600 uppercase tracking-wider">決策支援小助手</span>
+          <span className="text-xs font-semibold text-teal-600 uppercase tracking-wider">AI 綜合分析專家</span>
         </div>
         
         <ReactMarkdown
@@ -214,19 +236,11 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
         </ReactMarkdown>
       </div>
 
-      {/* Service Calculator (Controlled Component) */}
       <ServiceCalculator 
          data={data} 
          selectedServices={selectedServices}
          onServicesChange={setSelectedServices}
       />
-
-      {/* Footer Actions for Print view */}
-      <div className="mt-12 pt-6 border-t border-slate-200 text-center print:mt-4 print:pt-4">
-        <p className="text-xs text-slate-400 italic">
-          評估時間：{getTodayDate()}
-        </p>
-      </div>
     </div>
   );
 };
