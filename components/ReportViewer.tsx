@@ -1,12 +1,12 @@
-
 import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Bot, FileText, Printer, Check, ShieldAlert, AlertTriangle, ShieldCheck, Share2, Link, Loader2, Database } from 'lucide-react';
+import { Bot, FileText, Printer, Check, ShieldAlert, AlertTriangle, ShieldCheck, Share2, Link, Loader2, Database, Calendar as CalendarIcon } from 'lucide-react';
 import { AssessmentData, SelectedService } from '../types';
 import { RadarChart } from './RadarChart';
 import { ServiceCalculator } from './ServiceCalculator';
 import { SERVICES_CATALOG, DIMENSION_NAMES } from '../constants';
 import { sendToMakeWebhook } from '../services/notionService';
+import { getDimensionRiskLevel } from '../utils/scoring';
 
 interface Props {
   report: string | null;
@@ -19,6 +19,7 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
   const [webhookUrl, setWebhookUrl] = useState<string>(localStorage.getItem('make_webhook_url') || '');
   const [isExporting, setIsExporting] = useState(false);
   const [exportStatus, setExportStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [todayDate] = useState(new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }));
 
   useEffect(() => {
     localStorage.setItem('make_webhook_url', webhookUrl);
@@ -93,6 +94,11 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
       monthlyTotal += dailyUnitPrice * s.dailyFreq * s.monthlyDays;
     });
 
+    const getLight = (score: number) => {
+      const level = getDimensionRiskLevel(score);
+      return level === 'Red' ? '🔴紅燈' : level === 'Yellow' ? '🟡黃燈' : '🟢綠燈';
+    };
+
     const payload = {
       resident_info: {
         name: data.personalDetails.name,
@@ -106,10 +112,10 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
         risk_level: data.riskLevel,
         crisis_status: data.crisisStatus,
         dimensions: {
-          physical: data.dimensions.physical,
-          family: data.dimensions.family,
-          mental: data.dimensions.mental,
-          management: data.dimensions.management
+          physical: { score: data.dimensions.physical, light: getLight(data.dimensions.physical) },
+          family: { score: data.dimensions.family, light: getLight(data.dimensions.family) },
+          mental: { score: data.dimensions.mental, light: getLight(data.dimensions.mental) },
+          management: { score: data.dimensions.management, light: getLight(data.dimensions.management) }
         }
       },
       ai_report: report,
@@ -122,6 +128,17 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
           subtotal: Math.round((s.unit === '月' ? s.price/30 : s.price) * s.dailyFreq * s.monthlyDays)
         })),
         monthly_total: Math.round(monthlyTotal)
+      },
+      // 直接提供 Notion 要求的格式文字，方便 Make.com mapping
+      notion_formatted: {
+        name: data.personalDetails.name,
+        room: data.personalDetails.roomNumber,
+        crisis: data.crisisStatus === 'Red' ? '🔴 高度風險' : data.crisisStatus === 'Yellow' ? '🟡 中度風險' : '🟢 穩定',
+        dim1: `照顧模式的複雜度: ${data.dimensions.physical}分: ${getLight(data.dimensions.physical)}`,
+        dim2: `家庭溝通成本: ${data.dimensions.family}分: ${getLight(data.dimensions.family)}`,
+        dim3: `衝突與風險管理: ${data.dimensions.mental}分: ${getLight(data.dimensions.mental)}`,
+        dim4: `後續維運成本: ${data.dimensions.management}分: ${getLight(data.dimensions.management)}`,
+        total_fee: Math.round(monthlyTotal)
       }
     };
 
@@ -142,7 +159,7 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
     <div className="max-w-none relative pb-10">
       
       {/* Notion Integration Toolbar */}
-      <div className="space-y-4 mb-6 print:hidden">
+      <div className="space-y-4 mb-6 print:hidden share-toolbar">
         {/* Webhook URL Input Space */}
         <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-col sm:flex-row gap-3 items-center shadow-inner">
           <div className="flex items-center text-slate-500 shrink-0">
@@ -151,7 +168,7 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
           </div>
           <input 
             type="text"
-            placeholder="請貼上您的 Webhook URL (例如 https://hook.us1.make.com/...)"
+            placeholder="請貼上您的 Webhook URL"
             className="flex-1 text-xs border border-slate-300 rounded px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500 transition-all bg-white"
             value={webhookUrl}
             onChange={(e) => setWebhookUrl(e.target.value)}
@@ -159,13 +176,11 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
         </div>
 
         <div className="flex justify-between items-center">
-          {/* Print Button (Left) */}
           <button onClick={() => window.print()} className="flex items-center text-sm bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors shadow-sm font-medium">
             <Printer className="w-4 h-4 mr-2" />
             列印完整報告 / PDF
           </button>
 
-          {/* Notion Export Button (Far Right) */}
           <button 
             onClick={handleExportToNotion}
             disabled={isExporting}
@@ -189,58 +204,74 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
         </div>
       </div>
 
-      {/* Psychological Crisis Banner */}
-      <div className={`mb-6 p-4 rounded-xl border-2 flex items-center gap-4 ${
-        data.crisisStatus === 'Red' ? 'bg-red-50 border-red-200 text-red-800' :
-        data.crisisStatus === 'Yellow' ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-green-50 border-green-200 text-green-800'
-      }`}>
-        <div className={`p-3 rounded-full ${
-          data.crisisStatus === 'Red' ? 'bg-red-200' :
-          data.crisisStatus === 'Yellow' ? 'bg-amber-200' : 'bg-green-200'
+      {/* 報告標題 (含日期) */}
+      <div className="bg-teal-700 text-white px-6 py-4 rounded-t-xl mb-0 flex justify-between items-center print:rounded-none">
+        <h2 className="text-xl font-black flex items-center">
+          <FileText className="w-6 h-6 mr-2" />
+          好好園館決策支援報告
+        </h2>
+        <div className="flex items-center text-sm font-bold bg-teal-800/50 px-3 py-1 rounded-full">
+          <CalendarIcon className="w-4 h-4 mr-2 opacity-70" />
+          評估日期：{todayDate}
+        </div>
+      </div>
+
+      <div className="bg-white border-x border-b border-slate-200 p-8 rounded-b-xl print:border-none print:p-0">
+        {/* Psychological Crisis Banner */}
+        <div className={`mb-6 p-4 rounded-xl border-2 flex items-center gap-4 ${
+          data.crisisStatus === 'Red' ? 'bg-red-50 border-red-200 text-red-800' :
+          data.crisisStatus === 'Yellow' ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-green-50 border-green-200 text-green-800'
         }`}>
-          {data.crisisStatus === 'Red' ? <ShieldAlert className="w-8 h-8 text-red-600" /> : 
-           data.crisisStatus === 'Yellow' ? <AlertTriangle className="w-8 h-8 text-amber-600" /> : <ShieldCheck className="w-8 h-8 text-green-600" />}
+          <div className={`p-3 rounded-full shrink-0 ${
+            data.crisisStatus === 'Red' ? 'bg-red-200' :
+            data.crisisStatus === 'Yellow' ? 'bg-amber-200' : 'bg-green-200'
+          }`}>
+            {data.crisisStatus === 'Red' ? <ShieldAlert className="w-8 h-8 text-red-600" /> : 
+             data.crisisStatus === 'Yellow' ? <AlertTriangle className="w-8 h-8 text-amber-600" /> : <ShieldCheck className="w-8 h-8 text-green-600" />}
+          </div>
+          <div>
+            <h3 className="font-black text-lg leading-tight">心理危機判定：{
+              data.crisisStatus === 'Red' ? '🔴 高度危險 (立即介入)' : 
+              data.crisisStatus === 'Yellow' ? '🟡 中度風險 (密切觀察)' : '🟢 穩定 (持續監測)'
+            }</h3>
+            <p className="text-sm opacity-90 font-medium mt-1">
+              {data.crisisStatus === 'Red' ? '指令：啟動危機處理流程，通知家屬，24小時不離人，移除危險物品。' : 
+               data.crisisStatus === 'Yellow' ? '指令：增加訪視頻率，與家屬建立聯繫網，連結醫療資源。' : '狀態：維持常規關懷與情緒支持，鼓勵社交。'}
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 className="font-black text-lg leading-tight">心理危機判定：{
-            data.crisisStatus === 'Red' ? '🔴 高度危險 (立即介入)' : 
-            data.crisisStatus === 'Yellow' ? '🟡 中度風險 (密切觀察)' : '🟢 穩定 (持續監測)'
-          }</h3>
-          <p className="text-sm opacity-90 font-medium mt-1">
-            {data.crisisStatus === 'Red' ? '指令：啟動危機處理流程，通知家屬，24小時不離人，移除危險物品。' : 
-             data.crisisStatus === 'Yellow' ? '指令：增加訪視頻率，與家屬建立聯繫網，連結醫療資源。' : '狀態：維持常規關懷與情緒支持，鼓勵社交。'}
-          </p>
+
+        <RadarChart dimensions={data.dimensions} />
+
+        <div className="prose prose-slate prose-headings:text-teal-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700 max-w-none">
+          <div className="flex items-center space-x-2 mb-6 pb-4 border-b border-slate-100 print:hidden">
+            <Bot className="w-5 h-5 text-teal-600" />
+            <span className="text-xs font-bold text-teal-600 uppercase tracking-widest">AI 管家決策系統生成之專業報告</span>
+          </div>
+          
+          <ReactMarkdown
+            components={{
+              h1: ({node, ...props}) => <h1 className="text-2xl font-black mb-4 text-teal-900" {...props} />,
+              h2: ({node, ...props}) => <h2 className="text-xl font-bold mt-8 mb-4 text-teal-800 border-l-4 border-teal-500 pl-3 bg-slate-50 py-1" {...props} />,
+              h3: ({node, ...props}) => <h3 className="text-lg font-bold mt-6 mb-3 text-slate-800 border-b border-slate-100 pb-1" {...props} />,
+              ul: ({node, ...props}) => <ul className="list-disc list-outside ml-5 space-y-2 mb-4" {...props} />,
+              li: ({node, ...props}) => <li className="pl-1" {...props} />,
+              strong: ({node, ...props}) => <strong className="font-bold text-red-700 bg-red-50 px-1 rounded" {...props} />, 
+              p: ({node, ...props}) => <p className="mb-4 leading-relaxed" {...props} />,
+            }}
+          >
+            {report}
+          </ReactMarkdown>
+        </div>
+
+        <div className="print:break-inside-avoid">
+          <ServiceCalculator 
+             data={data} 
+             selectedServices={selectedServices}
+             onServicesChange={setSelectedServices}
+          />
         </div>
       </div>
-
-      <RadarChart dimensions={data.dimensions} />
-
-      <div className="prose prose-slate prose-headings:text-teal-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700 max-w-none">
-        <div className="flex items-center space-x-2 mb-6 pb-4 border-b border-slate-100">
-          <Bot className="w-5 h-5 text-teal-600" />
-          <span className="text-xs font-bold text-teal-600 uppercase tracking-widest">AI 管家決策系統生成之專業報告</span>
-        </div>
-        
-        <ReactMarkdown
-          components={{
-            h1: ({node, ...props}) => <h1 className="text-2xl font-black mb-4 text-teal-900" {...props} />,
-            h2: ({node, ...props}) => <h2 className="text-xl font-bold mt-8 mb-4 text-teal-800 border-l-4 border-teal-500 pl-3 bg-slate-50 py-1" {...props} />,
-            h3: ({node, ...props}) => <h3 className="text-lg font-bold mt-6 mb-3 text-slate-800 border-b border-slate-100 pb-1" {...props} />,
-            ul: ({node, ...props}) => <ul className="list-disc list-outside ml-5 space-y-2 mb-4" {...props} />,
-            li: ({node, ...props}) => <li className="pl-1" {...props} />,
-            strong: ({node, ...props}) => <strong className="font-bold text-red-700 bg-red-50 px-1 rounded" {...props} />, 
-            p: ({node, ...props}) => <p className="mb-4 leading-relaxed" {...props} />,
-          }}
-        >
-          {report}
-        </ReactMarkdown>
-      </div>
-
-      <ServiceCalculator 
-         data={data} 
-         selectedServices={selectedServices}
-         onServicesChange={setSelectedServices}
-      />
     </div>
   );
 };

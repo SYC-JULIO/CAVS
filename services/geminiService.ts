@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { AssessmentData } from "../types";
 import { QUESTIONS, DIMENSION_NAMES, CRISIS_QUESTIONS } from "../constants";
@@ -65,7 +64,9 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
 1. **心理危機處置建議**：針對檢出的心理危機，給予生活管家最直接的應對與環境安全指引。
 2. **風險管理策略**：結合最高風險面向「${highestDimName}」，標註**粗體安全警示**項目。
 3. **服務預期產生效益**：
-   * 格式：◆[潛在問題]：藉由[管家介入手段]，期待[改善效益]。
+   * ⚠️ 重要：請使用「條列式 (Bullet Points)」呈現，嚴禁使用 Markdown 表格。
+   * 格式要求：
+     * ◆ [潛在問題]：藉由 [管家介入手段]，期待 [改善效益]。
    * ⚠️ 禁語：嚴格禁止出現「照護」、「醫療」等醫療詞彙。請改用「生活協助」、「管家介入」等。
   `;
 
@@ -90,18 +91,16 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
 
       // 建立詳細的偵錯訊息
       if (message.includes("401") || message.includes("403") || message.includes("API key not valid")) {
-          lastErrorMsg = `[401/403] API 金鑰無效或權限不足。請檢查您的 Render 設定中 KEY 名稱是否正確（建議使用 VITE_API_KEY）。`;
-          // 授權失敗通常切換模型也沒用，但我們還是按要求走完循環或拋出
+          lastErrorMsg = `[401/403] API 金鑰無效或權限不足。`;
           throw new Error(lastErrorMsg);
       } else if (message.includes("429") || message.includes("Quota")) {
           lastErrorMsg = `[429] 模型 ${currentModel} 的免費額度已用完。`;
       } else if (message.includes("404") || message.includes("not found")) {
-          lastErrorMsg = `[404] 模型名稱 '${currentModel}' 無法識別或尚未在您的區域開放。`;
+          lastErrorMsg = `[404] 模型名稱 '${currentModel}' 無法識別。`;
       } else {
           lastErrorMsg = `[${status}] ${message}`;
       }
 
-      // 如果不是最後一個模型，繼續嘗試
       if (i === MODELS_FALLBACK.length - 1) {
         throw new Error("今日免費額度已用完，請聯繫工作人員");
       }

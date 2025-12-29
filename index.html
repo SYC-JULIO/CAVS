@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -30,41 +29,55 @@
       }
       
       @media print {
-        body {
-          background-color: white;
+        @page {
+          margin: 1cm;
         }
-        /* Hide everything by default */
-        header, .lg\:col-span-5 {
+        body {
+          background-color: white !important;
+          -webkit-print-color-adjust: exact;
+          print-color-adjust: exact;
+        }
+        /* 隱藏非必要元素 */
+        header, .lg\:col-span-5, .print\:hidden, button, .share-toolbar {
           display: none !important;
         }
-        /* Make report full width */
+        /* 使報告區域佔滿全寬並可正常分頁 */
         .lg\:col-span-7 {
           width: 100% !important;
           grid-column: span 12 / span 12 !important;
+          position: static !important;
+          display: block !important;
         }
         .max-w-7xl {
             max-width: none !important;
             padding: 0 !important;
             margin: 0 !important;
         }
-        /* Hide scrollbars and overflow limits */
+        /* 確保捲動容器在列印時展開 */
         .overflow-y-auto {
             overflow: visible !important;
             max-height: none !important;
+            height: auto !important;
         }
-        .shadow-sm {
+        .shadow-xl, .shadow-sm, .shadow-md {
             box-shadow: none !important;
         }
         .border {
-            border: none !important;
+            border: 1px solid #e2e8f0 !important;
         }
-        /* Hide non-printable elements */
-        .print\:hidden, button {
-            display: none !important;
+        .bg-slate-50, .bg-teal-50 {
+            background-color: transparent !important;
         }
-        /* Ensure charts break nicely */
+        /* 強制加值服務試算表不要被截斷 */
         .print\:break-inside-avoid {
             break-inside: avoid;
+            page-break-inside: avoid;
+            display: block !important;
+            margin-top: 2rem !important;
+        }
+        /* 修正 Markdown 顏色在黑白列印時的清晰度 */
+        .prose strong {
+            color: #b91c1c !important;
         }
       }
     </style>
@@ -85,7 +98,6 @@
 </head>
   <body>
     <div id="root"></div>
-    <!-- 關鍵修正：加入這行 Script 指向您的主要 React 檔案 -->
     <script type="module" src="/index.tsx"></script>
   </body>
 </html>
