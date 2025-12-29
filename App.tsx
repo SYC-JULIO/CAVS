@@ -32,7 +32,7 @@ const App: React.FC = () => {
     setReport(null);
     
     try {
-      // 根據規範：檢查是否有選過 Key，若無則開啟對話框
+      // 檢查是否已選擇 API 金鑰，若無則啟動選擇對話框
       // @ts-ignore
       if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
         // @ts-ignore
@@ -40,33 +40,32 @@ const App: React.FC = () => {
         if (!hasKey) {
           // @ts-ignore
           await window.aistudio.openSelectKey();
-          // 規範要求：觸發後應視為成功並繼續，不在此 return
+          // 觸發選擇後繼續執行，不中斷
         }
       }
 
       const result = await generateCareAdvice(data);
       setReport(result);
     } catch (err: any) {
-      console.error("Analysis Failed:", err);
+      console.error("Operation Failed:", err);
       
       if (err.message === "AUTH_REQUIRED") {
-        // 如果執行中發現 Key 失效或缺失
         // @ts-ignore
         if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
            // @ts-ignore
            await window.aistudio.openSelectKey();
-           setError("請在視窗中選擇具備權限的 API 金鑰（建議使用付費專案金鑰）。");
+           setError("請點擊上方金鑰圖示，選擇具備權限的 API 金鑰後再次嘗試。");
         } else {
-           setError("環境變數 API_KEY 未正確配置或已過期，請確認系統設定。");
+           setError("未偵測到有效的 API_KEY。請確認環境變數已正確注入或金鑰未過期。");
         }
         setIsLoading(false);
         return;
       }
 
-      const errorMessage = err.message || '連線逾時或發生未知錯誤';
-      if (errorMessage.includes('額度已用完') || errorMessage.includes('429')) {
+      const errorMessage = err.message || '連線逾時，請檢查網路狀態。';
+      if (errorMessage.includes('額度') || errorMessage.includes('429')) {
           setIsQuotaError(true);
-          setError("當前免費配額已達上限，請稍後再試。");
+          setError("當前免費配額已用完，請稍候重試。");
       } else {
           setError(errorMessage);
       }
@@ -94,11 +93,12 @@ const App: React.FC = () => {
                 // @ts-ignore
                 if (window.aistudio) window.aistudio.openSelectKey();
               }}
-              className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-teal-600"
-              title="更新 API 金鑰設定"
+              className="flex items-center space-x-2 px-3 py-1.5 border border-slate-200 rounded-lg text-slate-500 hover:bg-slate-50 hover:text-teal-600 transition-all text-xs font-bold"
             >
-              <Key className="w-5 h-5" />
+              <Key className="w-4 h-4" />
+              <span>設定金鑰</span>
             </button>
+            <div className="h-6 w-px bg-slate-200 hidden sm:block"></div>
             <HelpCircle className="w-5 h-5 text-slate-300 cursor-help hover:text-teal-600 transition-colors" />
           </div>
         </div>
