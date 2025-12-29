@@ -73,14 +73,14 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
           <FileText className="w-8 h-8 text-slate-300" />
         </div>
         <p>尚未生成報告</p>
-        <p className="text-sm mt-2">請完成評估量表與心理危機判定</p>
+        <p className="text-sm mt-2">請完成左側評估與心理危機判定</p>
       </div>
     );
   }
 
   const handleExportToNotion = async () => {
     if (!webhookUrl) {
-      alert("請先填入 Make.com Webhook URL");
+      alert("請先在上方填入 Make.com Webhook URL");
       return;
     }
 
@@ -143,14 +143,15 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
       
       {/* Notion Integration Toolbar */}
       <div className="space-y-4 mb-6 print:hidden">
-        <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-col sm:flex-row gap-3 items-center">
+        {/* Webhook URL Input Space */}
+        <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-col sm:flex-row gap-3 items-center shadow-inner">
           <div className="flex items-center text-slate-500 shrink-0">
             <Link className="w-4 h-4 mr-2" />
-            <span className="text-xs font-bold uppercase tracking-wider">Make.com Webhook</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Make.com Webhook URL</span>
           </div>
           <input 
             type="text"
-            placeholder="請在此輸入 Webhook URL..."
+            placeholder="請貼上您的 Webhook URL (例如 https://hook.us1.make.com/...)"
             className="flex-1 text-xs border border-slate-300 rounded px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500 transition-all bg-white"
             value={webhookUrl}
             onChange={(e) => setWebhookUrl(e.target.value)}
@@ -158,11 +159,13 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
         </div>
 
         <div className="flex justify-between items-center">
-          <button onClick={() => window.print()} className="flex items-center text-sm bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
+          {/* Print Button (Left) */}
+          <button onClick={() => window.print()} className="flex items-center text-sm bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors shadow-sm font-medium">
             <Printer className="w-4 h-4 mr-2" />
-            列印 / PDF
+            列印完整報告 / PDF
           </button>
 
+          {/* Notion Export Button (Far Right) */}
           <button 
             onClick={handleExportToNotion}
             disabled={isExporting}
@@ -179,7 +182,7 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
             ) : exportStatus === 'success' ? (
               <Check className="w-4 h-4 mr-2" />
             ) : (
-              <Database className="w-4 h-4 mr-2" />
+              <Database className="w-4 h-4 mr-2 text-teal-100" />
             )}
             {isExporting ? '處理中...' : exportStatus === 'success' ? '匯出成功' : '確認並匯出到 Notion'}
           </button>
@@ -199,13 +202,13 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
            data.crisisStatus === 'Yellow' ? <AlertTriangle className="w-8 h-8 text-amber-600" /> : <ShieldCheck className="w-8 h-8 text-green-600" />}
         </div>
         <div>
-          <h3 className="font-black text-lg">心理危機判定：{
-            data.crisisStatus === 'Red' ? '高度危險' : 
-            data.crisisStatus === 'Yellow' ? '中度風險' : '穩定'
+          <h3 className="font-black text-lg leading-tight">心理危機判定：{
+            data.crisisStatus === 'Red' ? '🔴 高度危險 (立即介入)' : 
+            data.crisisStatus === 'Yellow' ? '🟡 中度風險 (密切觀察)' : '🟢 穩定 (持續監測)'
           }</h3>
-          <p className="text-sm opacity-90 font-medium">
-            {data.crisisStatus === 'Red' ? '指令：通知家屬，24小時不離人，移除危險物品。' : 
-             data.crisisStatus === 'Yellow' ? '指令：增加訪視頻率，與家屬建立聯繫網。' : '狀態：維持常規關懷與情緒支持。'}
+          <p className="text-sm opacity-90 font-medium mt-1">
+            {data.crisisStatus === 'Red' ? '指令：啟動危機處理流程，通知家屬，24小時不離人，移除危險物品。' : 
+             data.crisisStatus === 'Yellow' ? '指令：增加訪視頻率，與家屬建立聯繫網，連結醫療資源。' : '狀態：維持常規關懷與情緒支持，鼓勵社交。'}
           </p>
         </div>
       </div>
@@ -215,17 +218,17 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
       <div className="prose prose-slate prose-headings:text-teal-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700 max-w-none">
         <div className="flex items-center space-x-2 mb-6 pb-4 border-b border-slate-100">
           <Bot className="w-5 h-5 text-teal-600" />
-          <span className="text-xs font-semibold text-teal-600 uppercase tracking-wider">AI 生活管家分析報告</span>
+          <span className="text-xs font-bold text-teal-600 uppercase tracking-widest">AI 管家決策系統生成之專業報告</span>
         </div>
         
         <ReactMarkdown
           components={{
-            h1: ({node, ...props}) => <h1 className="text-2xl font-bold mb-4 text-teal-900" {...props} />,
-            h2: ({node, ...props}) => <h2 className="text-xl font-bold mt-8 mb-4 text-teal-800 border-l-4 border-teal-500 pl-3" {...props} />,
-            h3: ({node, ...props}) => <h3 className="text-lg font-semibold mt-6 mb-3 text-slate-800" {...props} />,
+            h1: ({node, ...props}) => <h1 className="text-2xl font-black mb-4 text-teal-900" {...props} />,
+            h2: ({node, ...props}) => <h2 className="text-xl font-bold mt-8 mb-4 text-teal-800 border-l-4 border-teal-500 pl-3 bg-slate-50 py-1" {...props} />,
+            h3: ({node, ...props}) => <h3 className="text-lg font-bold mt-6 mb-3 text-slate-800 border-b border-slate-100 pb-1" {...props} />,
             ul: ({node, ...props}) => <ul className="list-disc list-outside ml-5 space-y-2 mb-4" {...props} />,
             li: ({node, ...props}) => <li className="pl-1" {...props} />,
-            strong: ({node, ...props}) => <strong className="font-bold text-red-600 bg-red-50 px-1 rounded" {...props} />, 
+            strong: ({node, ...props}) => <strong className="font-bold text-red-700 bg-red-50 px-1 rounded" {...props} />, 
             p: ({node, ...props}) => <p className="mb-4 leading-relaxed" {...props} />,
           }}
         >

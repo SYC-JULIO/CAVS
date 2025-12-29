@@ -4,18 +4,27 @@ import { AssessmentData } from "../types";
 import { QUESTIONS, DIMENSION_NAMES, CRISIS_QUESTIONS } from "../constants";
 import { getDimensionRiskLevel } from "../utils/scoring";
 
+/**
+ * 嚴格遵循使用者指定之免付費模型備援鏈
+ */
 const FALLBACK_MODELS = [
-  'gemini-3-pro-preview',
+  'gemini-2.5-flash-lite',
+  'gemini-2.5-flash-preview-tts',
+  'gemini-2.5-flash-latest',
   'gemini-3-flash-preview',
-  'gemini-flash-latest',
-  'gemini-flash-lite-latest'
+  'gemini-robotics-er-1.5-preview',
+  'gemma-3-12b'
 ];
 
 export const generateCareAdvice = async (data: AssessmentData): Promise<string> => {
-  // Use a temporary variable to access process.env.API_KEY to prevent potential reference errors
-  // while strictly following the instruction to obtain the key exclusively from this variable.
   const apiKey = process.env.API_KEY;
-  const ai = new GoogleGenAI({ apiKey: apiKey as string });
+  
+  if (!apiKey) {
+    throw new Error("系統環境設定異常，請聯繫工作人員。");
+  }
+
+  // 初始化 AI 客戶端
+  const ai = new GoogleGenAI({ apiKey });
 
   const highRiskAnswers = Object.entries(data.answers)
     .filter(([_, level]) => level === 'high')
@@ -108,7 +117,6 @@ ${data.qualitativeAnalysis}
 * 格式：\`◆[潛在風險/問題]：藉由[生活管家介入手段]，期待[具體改善效益]\`
   `;
 
-  let lastError: any = null;
   for (const model of FALLBACK_MODELS) {
     try {
       const response = await ai.models.generateContent({
@@ -116,12 +124,11 @@ ${data.qualitativeAnalysis}
         contents: prompt,
       });
       if (response.text) return response.text;
-      else throw new Error('Empty response from AI model');
     } catch (error: any) {
-      console.error(`Error with model ${model}:`, error);
-      lastError = error;
+      console.warn(`模型 ${model} 呼叫失敗，嘗試下一個備援模型。`);
     }
   }
   
-  throw new Error("目前系統忙碌或額度已滿。詳細原因：" + (lastError?.message || "未知錯誤"));
+  // 若所有備援模型皆失敗，顯示指定訊息
+  throw new Error("今日免費額度已用完，請聯繫工作人員");
 };
