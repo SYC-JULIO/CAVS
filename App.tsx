@@ -35,17 +35,16 @@ const App: React.FC = () => {
       const result = await generateCareAdvice(data);
       setReport(result);
     } catch (err: any) {
-      console.error(err);
+      console.error("Generation Error:", err);
       
-      // 如果是授權錯誤，靜默開啟金鑰選擇器，不顯示說明
       if (err.message === "AUTH_REQUIRED") {
         // @ts-ignore
         if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
            // @ts-ignore
            window.aistudio.openSelectKey();
-           setError("請在彈出的視窗中選擇金鑰以繼續分析。");
+           setError("請在彈出的視窗中完成 API 金鑰設定後，再試一次。");
         } else {
-           setError("系統授權異常，請稍後再試。");
+           setError("偵測不到有效的 API 金鑰。請確認環境變數 API_KEY 已正確設定。");
         }
         setIsLoading(false);
         return;
@@ -86,7 +85,6 @@ const App: React.FC = () => {
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* 左側：輸入表單 */}
           <div className="lg:col-span-5">
             <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden sticky top-24 ring-1 ring-slate-100">
               <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
@@ -106,7 +104,6 @@ const App: React.FC = () => {
             </div>
           </div>
 
-          {/* 右側：分析報告 */}
           <div className="lg:col-span-7">
              <div className="bg-white rounded-2xl shadow-xl border border-slate-200 h-full min-h-[700px] flex flex-col overflow-hidden ring-1 ring-teal-50">
                <div className="bg-teal-600 px-6 py-5 border-b border-teal-700">

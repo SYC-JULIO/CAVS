@@ -5,7 +5,8 @@ import { QUESTIONS, DIMENSION_NAMES, CRISIS_QUESTIONS } from "../constants";
 import { getDimensionRiskLevel } from "../utils/scoring";
 
 /**
- * 嚴格遵循使用者指定之免付費模型備援鏈
+ * 依序嘗試使用者指定之備援模型鏈
+ * 採用更穩定的 SDK 識別碼
  */
 const FALLBACK_MODELS = [
   'gemini-2.5-flash-lite-latest',
@@ -17,9 +18,13 @@ const FALLBACK_MODELS = [
 ];
 
 export const generateCareAdvice = async (data: AssessmentData): Promise<string> => {
-  // 不在此處拋出錯誤，讓 GoogleGenAI 嘗試使用注入的 API_KEY
-  const apiKey = process.env.API_KEY || "";
-  const ai = new GoogleGenAI({ apiKey });
+  const apiKey = process.env.API_KEY;
+  
+  // 如果完全找不到 Key，拋出 AUTH_REQUIRED 讓前端處理
+  if (!apiKey || apiKey === "undefined" || apiKey.length < 5) {
+    console.error("Critical: API_KEY is missing in process.env");
+    throw new Error("AUTH_REQUIRED");
+  }
 
   const highRiskAnswers = Object.entries(data.answers)
     .filter(([_, level]) => level === 'high')
@@ -56,73 +61,44 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
   
   const prompt = `
 **【角色與任務設定】**
+您是「共居住宅」的資深生活管家總管。請根據以下數據生成報告。
+語氣：理性、專業、像家人的關心。
+開頭請務必使用「您好。」
 
-您是「共居住宅」的**資深生活管家總管**（Senior Life Manager）。
-您的語氣必須設定為：「像家人一樣的關心，但保持抽離的專業理性」。
-*   **語氣風格**：以理性分析為主，感性關懷為輔。
-*   **任務目標**：根據評估數據，為這位住戶生成一份專業的「生活服務建議報告」。
-
-**【環境背景設定】**
-*   居住環境為「共居住宅」，配套有「日照中心」。
-*   強調由「生活管家」來串聯居住與活動。
-
-**【個案基本資料】**
-* 姓名：${data.personalDetails.name}
-* 房間：${data.personalDetails.roomNumber || '未安排'}
-* 性別：${data.personalDetails.gender}
-* 年齡：${data.personalDetails.age}
-
-**【人物簡述與事件背景】**
-${data.personBrief || '無提供'}
-
-**【心理危機檢出 (重要警示)】**
-* 心理危機燈號：${data.crisisStatus === 'Red' ? '🔴 高度風險' : data.crisisStatus === 'Yellow' ? '🟡 中度風險' : '🟢 穩定'}
-* 異常項目檢出：
-${detectedCrisis || '無顯著異常項目'}
-
-**【風險分析數據】**
-1.  **總體風險狀態：** ${data.riskLevel}
-2.  **四大面向得分：**
-    * ${dimInfo}
-3.  **最高風險面向：** ${highestDimName}
-4.  **高度風險項目檢出：**
-${highRiskAnswers || '無'}
-5.  **其他描述：**
-${data.qualitativeAnalysis}
+**【個案資料】**
+* 姓名：${data.personalDetails.name} | 房間：${data.personalDetails.roomNumber || '未安排'} | 性別：${data.personalDetails.gender} | 年齡：${data.personalDetails.age}
+* 背景：${data.personBrief || '無提供'}
+* 心理危機：${data.crisisStatus} (檢出項目：${detectedCrisis || '無'})
+* 風險數據：${dimInfo}
+* 高風險項：${highRiskAnswers || '無'}
+* 備註：${data.qualitativeAnalysis}
 
 ---
-
-**【輸出建議結構要求】**
-
-請務必以「您好。」作為回應的開頭。
-
-### 一、心理危機警示與處置 (若非綠燈請置頂標註)
-* 分析心理危機判定結果。若為紅燈或黃燈，請給予最直接、嚴肅的管家對策建議。
-
-### 二、狀態總評與居住建議
-* 結合「人物簡述」與「風險數據」。
-* **管家觀點與居住建議：** 使用客觀方式說明。
-
-### 三、風險管理與管家應對策略
-* **生活管家介入方式：** 具體描述管家會如何觀察、引導、陪伴或協調。
-* **安全警示：** 若有遊走、攻擊、跌倒或自殺風險，請以粗體標示。
-
-### 四、服務預期產生效益 (嚴格規範)
-* ⚠️ 禁語：禁止使用「護理」、「照護」、「醫療」。
-* 格式：\`◆[潛在風險/問題]：藉由[生活管家介入手段]，期待[具體改善效益]\`
+【報告結構】
+一、心理危機警示與處置 (若非綠燈請置頂)
+二、狀態總評與居住建議
+三、風險管理與管家應對策略 (標註粗體安全警示)
+四、服務預期效益 (格式：◆[問題]：藉由[手段]，期待[效益])
+*禁止使用「護理」、「照護」、「醫療」等詞彙。*
   `;
+
+  let lastError: any = null;
 
   for (const model of FALLBACK_MODELS) {
     try {
+      // 每次嘗試都重新建立 instance 確保使用最新的 Key 狀態
+      const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
         model: model,
         contents: prompt,
       });
       if (response.text) return response.text;
     } catch (error: any) {
-      console.warn(`嘗試模型 ${model} 失敗:`, error.message);
-      // 如果錯誤訊息包含授權問題，且環境允許，我們在 App 層級處理對話框
-      if (error.message.includes("API key") || error.message.includes("403") || error.message.includes("401")) {
+      console.warn(`Model ${model} failed:`, error.message);
+      lastError = error;
+      
+      // 401/403 通常代表金鑰有問題或模型不支援該金鑰
+      if (error.message.includes("401") || error.message.includes("403") || error.message.includes("API key")) {
          throw new Error("AUTH_REQUIRED");
       }
     }
