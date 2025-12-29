@@ -1,23 +1,19 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { AssessmentData } from "../types";
 import { QUESTIONS, DIMENSION_NAMES, CRISIS_QUESTIONS } from "../constants";
 import { getDimensionRiskLevel } from "../utils/scoring";
 
 /**
- * 依照 Google GenAI SDK 規範設定模型 fallback
+ * 依照任務複雜度選擇適當模型
+ * 複雜文本任務建議使用 gemini-3-pro-preview
  */
-const MODELS_TO_TRY = [
-  'gemini-3-pro-preview',
-  'gemini-3-flash-preview',
-  'gemini-flash-latest'
-];
+const MODEL_NAME = 'gemini-3-pro-preview';
 
 export const generateCareAdvice = async (data: AssessmentData): Promise<string> => {
   const apiKey = process.env.API_KEY;
 
   if (!apiKey) {
-    throw new Error("偵測不到 API 金鑰 (API_KEY is missing)。請確保已在 Render 設定環境變數。");
+    throw new Error("偵測不到 API 金鑰 (API_KEY is missing)。請確保系統環境變數配置正確。");
   }
 
   const detectedCrisis = Object.entries(data.crisisAnswers)
@@ -80,38 +76,21 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
 - 「## 服務預期產生效益」
   `;
 
-  let lastErrorMsg = "";
-
-  for (let i = 0; i < MODELS_TO_TRY.length; i++) {
-    const currentModel = MODELS_TO_TRY[i];
-    try {
-      const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: currentModel,
-        contents: prompt,
-      });
-      
-      if (response && response.text) {
-        return response.text;
-      }
-    } catch (error: any) {
-      const message = error.message || "No message provided";
-      console.warn(`[Fallback] ${currentModel} failed: ${message}`);
-
-      if (message.includes("401") || message.includes("403") || message.includes("API key not valid")) {
-          lastErrorMsg = `[401/403] API 金鑰無效或權限不足。`;
-          throw new Error(lastErrorMsg);
-      } else if (message.includes("429") || message.includes("Quota")) {
-          lastErrorMsg = `[429] 模型 ${currentModel} 的免費額度已用完。`;
-      } else {
-          lastErrorMsg = `Error: ${message}`;
-      }
-
-      if (i === MODELS_TO_TRY.length - 1) {
-        throw new Error(lastErrorMsg || "今日免費額度已用完，請聯繫工作人員");
-      }
+  try {
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: MODEL_NAME,
+      contents: prompt,
+    });
+    
+    if (response && response.text) {
+      return response.text;
+    } else {
+      throw new Error("AI 回傳了空的結果");
     }
+  } catch (error: any) {
+    const message = error.message || "未知錯誤";
+    console.error(`[API Error] ${message}`);
+    throw new Error(message);
   }
-
-  throw new Error("今日免費額度已用完，請聯繫工作人員");
 };

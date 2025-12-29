@@ -5,7 +5,6 @@ import { generateCareAdvice } from './services/geminiService';
 import { AssessmentData } from './types';
 import { Activity, AlertCircle, Clock, HelpCircle, Terminal } from 'lucide-react';
 
-// Added missing personalityType property to satisfy AssessmentData interface and fix line 8 error
 const INITIAL_DATA: AssessmentData = {
   personalDetails: { name: '', gender: '', age: '', contact: '', roomNumber: '' },
   personBrief: '',
@@ -42,7 +41,7 @@ const App: React.FC = () => {
       
       if (errorMessage.includes('額度') || errorMessage.includes('429')) {
           setIsQuotaError(true);
-          setError("今日免費額度已用完，請聯繫工作人員");
+          setError("今日免費額度已用完，請稍後再試或聯繫工作人員。");
       } else {
           setError(errorMessage);
       }
@@ -56,7 +55,6 @@ const App: React.FC = () => {
     setReport(null);
     setError(null);
     setIsQuotaError(false);
-    // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
@@ -73,6 +71,7 @@ const App: React.FC = () => {
               <p className="text-[10px] text-slate-400 font-mono uppercase tracking-widest">Resident Status Assessment System</p>
             </div>
           </div>
+          
           <div className="flex items-center space-x-4">
             <div className="hidden lg:flex items-center text-slate-500 text-xs font-bold tracking-widest bg-slate-50 px-4 py-2 rounded-full border border-slate-100">
               <span className="hover:text-teal-600 transition-colors">住戶狀態評估</span>
@@ -126,27 +125,26 @@ const App: React.FC = () => {
                         {isQuotaError ? <Clock className="w-16 h-16 text-amber-500" /> : <AlertCircle className="w-16 h-16 text-red-500" />}
                      </div>
                      <div className="max-w-md w-full">
-                        <h3 className="font-black text-2xl mb-3 text-slate-800">API 呼叫異常</h3>
+                        <h3 className="font-black text-2xl mb-3 text-slate-800">分析發生錯誤</h3>
                         
                         <div className="bg-slate-900 rounded-xl p-4 mb-8 text-left overflow-hidden">
                           <div className="flex items-center text-slate-500 mb-2 border-b border-slate-800 pb-2">
                             <Terminal className="w-4 h-4 mr-2" />
-                            <span className="text-[10px] font-mono uppercase tracking-widest">Debug Diagnostic Information</span>
+                            <span className="text-[10px] font-mono uppercase tracking-widest">系統錯誤訊息</span>
                           </div>
                           <p className="text-red-400 font-mono text-sm leading-relaxed break-words italic">
-                            Error: {error}
+                            {error}
                           </p>
                         </div>
 
-                        <button 
-                          onClick={handleGenerate}
-                          className="bg-teal-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-teal-700 transition-all shadow-lg shadow-teal-200 w-full sm:w-auto"
-                        >
-                          重新嘗試生成
-                        </button>
-                        <p className="mt-4 text-xs text-slate-400">
-                          若持續報錯，請確認系統環境變數配置是否正確。
-                        </p>
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                          <button 
+                            onClick={handleGenerate}
+                            className="bg-teal-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-teal-700 transition-all shadow-lg shadow-teal-200 flex-1"
+                          >
+                            重新嘗試生成
+                          </button>
+                        </div>
                      </div>
                    </div>
                  ) : (
