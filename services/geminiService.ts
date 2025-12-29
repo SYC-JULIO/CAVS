@@ -21,7 +21,8 @@ const MODELS_FALLBACK = [
   'gemini-robotics-er-1.5-preview',
   'gemma-3-12b'
 ];
-
+const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
+console.log("Debug Key:", apiKey); //
 export const generateCareAdvice = async (data: AssessmentData): Promise<string> => {
   const apiKey = process.env.API_KEY;
 
