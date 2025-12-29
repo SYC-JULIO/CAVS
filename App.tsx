@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { AssessmentForm } from './components/AssessmentForm';
 import { ReportViewer } from './components/ReportViewer';
@@ -6,12 +5,14 @@ import { generateCareAdvice } from './services/geminiService';
 import { AssessmentData } from './types';
 import { Activity, AlertCircle, Clock, HelpCircle, Terminal } from 'lucide-react';
 
+// Added missing personalityType property to satisfy AssessmentData interface and fix line 8 error
 const INITIAL_DATA: AssessmentData = {
   personalDetails: { name: '', gender: '', age: '', contact: '', roomNumber: '' },
   personBrief: '',
   answers: {},
   crisisAnswers: {},
   crisisStatus: 'Green',
+  personalityType: '待觀察',
   qualitativeAnalysis: '',
   dimensions: { physical: 0, family: 0, mental: 0, management: 0 },
   totalScore: 0,
@@ -49,6 +50,15 @@ const App: React.FC = () => {
       setIsLoading(false);
     }
   }, [data]);
+
+  const handleReset = useCallback(() => {
+    setData(INITIAL_DATA);
+    setReport(null);
+    setError(null);
+    setIsQuotaError(false);
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
@@ -135,12 +145,12 @@ const App: React.FC = () => {
                           重新嘗試生成
                         </button>
                         <p className="mt-4 text-xs text-slate-400">
-                          若持續報錯且包含「API Key」，請檢查 Render 環境變數是否包含 VITE_API_KEY。
+                          若持續報錯，請確認系統環境變數配置是否正確。
                         </p>
                      </div>
                    </div>
                  ) : (
-                   <ReportViewer report={report} isLoading={isLoading} data={data} />
+                   <ReportViewer report={report} isLoading={isLoading} data={data} onReset={handleReset} />
                  )}
                </div>
              </div>

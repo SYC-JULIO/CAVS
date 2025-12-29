@@ -1,12 +1,13 @@
 
 export type RiskLevelType = 'Green' | 'Yellow' | 'Red';
+export type PersonalityType = '過度補償型' | '焦慮敏感型' | '自我放逐型' | '掌控攻擊型' | '待觀察';
 
 export interface PersonalDetails {
   name: string;
   gender: string;
   age: string;
   contact: string;
-  roomNumber: string; // 新增：房間號碼
+  roomNumber: string;
 }
 
 export interface QuestionConfig {
@@ -45,8 +46,9 @@ export interface AssessmentData {
   personalDetails: PersonalDetails;
   personBrief: string;
   answers: Record<number, 'low' | 'medium' | 'high' | null>;
-  crisisAnswers: Record<number, boolean>; // 新增：10題心理危機
-  crisisStatus: RiskLevelType; // 新增：心理危機燈號
+  crisisAnswers: Record<number, boolean>;
+  crisisStatus: RiskLevelType;
+  personalityType: PersonalityType; // Added personality type
   qualitativeAnalysis: string;
   
   dimensions: {

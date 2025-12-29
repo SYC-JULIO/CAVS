@@ -1,10 +1,11 @@
+
 import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Bot, FileText, Printer, Check, ShieldAlert, AlertTriangle, ShieldCheck, Database, Calendar as CalendarIcon, Edit3, Save, X, Loader2 } from 'lucide-react';
-import { AssessmentData, SelectedService } from '../types';
+import { Bot, FileText, Printer, Check, ShieldAlert, AlertTriangle, ShieldCheck, Database, Calendar as CalendarIcon, Loader2, UserPlus, Fingerprint } from 'lucide-react';
+import { AssessmentData, SelectedService, RiskLevelType } from '../types';
 import { RadarChart } from './RadarChart';
 import { ServiceCalculator } from './ServiceCalculator';
-import { SERVICES_CATALOG, DIMENSION_NAMES } from '../constants';
+import { SERVICES_CATALOG } from '../constants';
 import { sendToMakeWebhook } from '../services/notionService';
 import { getDimensionRiskLevel } from '../utils/scoring';
 
@@ -12,24 +13,16 @@ interface Props {
   report: string | null;
   isLoading: boolean;
   data: AssessmentData; 
+  onReset: () => void;
 }
 
 const DEFAULT_WEBHOOK_URL = 'https://hook.us2.make.com/gt5gvni691qb5c2ne2cd3j5lpq9gdpky';
 
-export const ReportViewer: React.FC<Props> = ({ report: initialReport, isLoading, data }) => {
-  const [report, setReport] = useState<string | null>(initialReport);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedReport, setEditedReport] = useState<string>('');
+export const ReportViewer: React.FC<Props> = ({ report, isLoading, data, onReset }) => {
   const [selectedServices, setSelectedServices] = useState<SelectedService[]>([]);
   const [isExporting, setIsExporting] = useState(false);
   const [exportStatus, setExportStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [todayDate] = useState(new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }));
-
-  // 當 API 生成新報告時更新本地狀態
-  useEffect(() => {
-    setReport(initialReport);
-    if (initialReport) setEditedReport(initialReport);
-  }, [initialReport]);
 
   useEffect(() => {
     const scores = [
@@ -74,18 +67,16 @@ export const ReportViewer: React.FC<Props> = ({ report: initialReport, isLoading
       return level === 'Red' ? '🔴 紅燈' : level === 'Yellow' ? '🟡 黃燈' : '🟢 綠燈';
     };
 
-    // 符合使用者要求的匯出項目
     const payload = {
       姓名: data.personalDetails.name,
       房間號碼: data.personalDetails.roomNumber || '未安排',
       心理危機判定: data.crisisStatus === 'Red' ? '🔴 高度風險' : data.crisisStatus === 'Yellow' ? '🟡 中度風險' : '🟢 穩定',
+      性格行為型態: data.personalityType, // Added personality type to Notion
       '照顧模式的複雜度:分數:燈號': `${data.dimensions.physical}分 : ${getLightLabel(data.dimensions.physical)}`,
       '家庭溝通成本:分數:燈號': `${data.dimensions.family}分 : ${getLightLabel(data.dimensions.family)}`,
       '衝突與風險管理:分數:燈號': `${data.dimensions.mental}分 : ${getLightLabel(data.dimensions.mental)}`,
       '後續維運成本:分數:燈號': `${data.dimensions.management}分 : ${getLightLabel(data.dimensions.management)}`,
       加值服務月費總計: Math.round(monthlyTotal),
-      
-      // 額外詳細內容
       分析報告全文: report,
       評估日期: todayDate
     };
@@ -103,9 +94,29 @@ export const ReportViewer: React.FC<Props> = ({ report: initialReport, isLoading
     }
   };
 
-  const saveEdit = () => {
-    setReport(editedReport);
-    setIsEditing(false);
+  const handleAssessNext = () => {
+    if (window.confirm("請確認已匯出pdf或匯出到notion，並清空本次評估結果？")) {
+      onReset();
+    }
+  };
+
+  // Helper to get themed styles based on risk status
+  const getSectionTheme = (status: RiskLevelType) => {
+    switch(status) {
+      case 'Red': return 'bg-red-50 border-red-200 text-red-900 border-l-8';
+      case 'Yellow': return 'bg-amber-50 border-amber-200 text-amber-900 border-l-8';
+      case 'Green': return 'bg-green-50 border-green-200 text-green-900 border-l-8';
+      default: return 'bg-slate-50 border-slate-200 text-slate-900 border-l-8';
+    }
+  };
+
+  const getHeaderTheme = (status: RiskLevelType) => {
+    switch(status) {
+      case 'Red': return 'text-red-700 border-red-200';
+      case 'Yellow': return 'text-amber-700 border-amber-200';
+      case 'Green': return 'text-green-700 border-green-200';
+      default: return 'text-slate-700 border-slate-200';
+    }
   };
 
   if (isLoading) {
@@ -137,35 +148,6 @@ export const ReportViewer: React.FC<Props> = ({ report: initialReport, isLoading
   return (
     <div className="max-w-none relative pb-10">
       
-      {/* Notion Integration Toolbar */}
-      <div className="flex justify-between items-center mb-6 print:hidden share-toolbar">
-        <button onClick={() => window.print()} className="flex items-center text-sm bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors shadow-sm font-medium">
-          <Printer className="w-4 h-4 mr-2" />
-          列印完整報告 / PDF
-        </button>
-
-        <button 
-          onClick={handleExportToNotion}
-          disabled={isExporting}
-          className={`flex items-center text-sm font-bold px-6 py-2 rounded-lg transition-all shadow-md active:scale-95 ${
-            exportStatus === 'success' 
-              ? 'bg-green-600 text-white' 
-              : isExporting 
-                ? 'bg-slate-400 text-white cursor-not-allowed'
-                : 'bg-teal-700 text-white hover:bg-teal-800'
-          }`}
-        >
-          {isExporting ? (
-            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-          ) : exportStatus === 'success' ? (
-            <Check className="w-4 h-4 mr-2" />
-          ) : (
-            <Database className="w-4 h-4 mr-2 text-teal-100" />
-          )}
-          {isExporting ? '處理中...' : exportStatus === 'success' ? '匯出成功' : '確認並匯出到 Notion'}
-        </button>
-      </div>
-
       {/* 報告標題 (含日期並排，靠右) */}
       <div className="bg-teal-700 text-white px-6 py-4 rounded-t-xl mb-0 flex justify-between items-center print:rounded-none">
         <h2 className="text-xl font-black flex items-center">
@@ -191,7 +173,7 @@ export const ReportViewer: React.FC<Props> = ({ report: initialReport, isLoading
             {data.crisisStatus === 'Red' ? <ShieldAlert className="w-8 h-8 text-red-600" /> : 
              data.crisisStatus === 'Yellow' ? <AlertTriangle className="w-8 h-8 text-amber-600" /> : <ShieldCheck className="w-8 h-8 text-green-600" />}
           </div>
-          <div>
+          <div className="flex-1">
             <h3 className="font-black text-lg leading-tight">心理危機判定：{
               data.crisisStatus === 'Red' ? '🔴 高度危險 (立即介入)' : 
               data.crisisStatus === 'Yellow' ? '🟡 中度風險 (密切觀察)' : '🟢 穩定 (持續監測)'
@@ -201,76 +183,100 @@ export const ReportViewer: React.FC<Props> = ({ report: initialReport, isLoading
                data.crisisStatus === 'Yellow' ? '指令：增加訪視頻率，與家屬建立聯繫網，連結醫療資源。' : '狀態：維持常規關懷與情緒支持，鼓勵社交。'}
             </p>
           </div>
+          
+          {/* Personality Type Label in Report */}
+          <div className="bg-white/50 px-4 py-2 rounded-lg border border-current flex flex-col items-center justify-center min-w-[120px]">
+             <Fingerprint className="w-4 h-4 mb-1" />
+             <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">行為型態</span>
+             <span className="text-sm font-black">{data.personalityType}</span>
+          </div>
         </div>
 
         <RadarChart dimensions={data.dimensions} />
 
         <div className="prose prose-slate prose-headings:text-teal-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700 max-w-none mb-10 relative">
-          <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 print:hidden">
-            <div className="flex items-center space-x-2">
-              <Bot className="w-5 h-5 text-teal-600" />
-              <span className="text-xs font-bold text-teal-600 uppercase tracking-widest">AI 管家決策系統生成之專業報告</span>
-            </div>
-            
-            {!isEditing ? (
-              <button 
-                onClick={() => setIsEditing(true)}
-                className="flex items-center text-xs font-bold text-slate-500 hover:text-teal-600 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 transition-all shadow-sm"
-              >
-                <Edit3 className="w-3.5 h-3.5 mr-1.5" />
-                編輯報告內容
-              </button>
-            ) : (
-              <div className="flex space-x-2">
-                <button 
-                  onClick={saveEdit}
-                  className="flex items-center text-xs font-bold text-white bg-teal-600 hover:bg-teal-700 px-3 py-1.5 rounded-lg border border-teal-700 transition-all shadow-sm"
-                >
-                  <Save className="w-3.5 h-3.5 mr-1.5" />
-                  確認儲存
-                </button>
-                <button 
-                  onClick={() => { setIsEditing(false); setEditedReport(report); }}
-                  className="flex items-center text-xs font-bold text-slate-500 bg-white hover:bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200 transition-all"
-                >
-                  <X className="w-3.5 h-3.5 mr-1.5" />
-                  取消
-                </button>
-              </div>
-            )}
+          <div className="flex items-center space-x-2 mb-6 pb-4 border-b border-slate-100 print:hidden">
+            <Bot className="w-5 h-5 text-teal-600" />
+            <span className="text-xs font-bold text-teal-600 uppercase tracking-widest">AI 管家決策系統生成之專業報告</span>
           </div>
           
-          {isEditing ? (
-            <textarea
-              className="w-full h-[600px] p-6 text-sm font-mono border-2 border-teal-100 rounded-xl focus:ring-4 focus:ring-teal-50 focus:border-teal-400 outline-none transition-all leading-relaxed bg-slate-50"
-              value={editedReport}
-              onChange={(e) => setEditedReport(e.target.value)}
-              placeholder="您可以在此處編輯 AI 生成的報告內容..."
-            />
-          ) : (
-            <ReactMarkdown
-              components={{
-                h1: ({node, ...props}) => <h1 className="text-2xl font-black mb-4 text-teal-900" {...props} />,
-                h2: ({node, ...props}) => <h2 className="text-xl font-bold mt-8 mb-4 text-teal-800 border-l-4 border-teal-500 pl-3 bg-slate-50 py-1" {...props} />,
-                h3: ({node, ...props}) => <h3 className="text-lg font-bold mt-6 mb-3 text-slate-800 border-b border-slate-100 pb-1" {...props} />,
-                ul: ({node, ...props}) => <ul className="list-disc list-outside ml-5 space-y-2 mb-4" {...props} />,
-                li: ({node, ...props}) => <li className="pl-1" {...props} />,
-                strong: ({node, ...props}) => <strong className="font-bold text-red-700 bg-red-50 px-1 rounded" {...props} />, 
-                p: ({node, ...props}) => <p className="mb-4 leading-relaxed" {...props} />,
-              }}
-            >
-              {report}
-            </ReactMarkdown>
-          )}
+          <ReactMarkdown
+            components={{
+              h1: ({node, ...props}) => <h1 className="text-2xl font-black mb-4 text-teal-900" {...props} />,
+              h2: ({node, children, ...props}) => {
+                const textContent = String(children);
+                let themeClass = "bg-slate-50 border-slate-200 text-slate-800";
+                
+                if (textContent.includes("心理危機處置建議")) {
+                  themeClass = getSectionTheme(data.crisisStatus);
+                } else if (textContent.includes("風險管理策略")) {
+                  themeClass = getSectionTheme(data.riskLevel);
+                } else if (textContent.includes("服務預期產生效益")) {
+                  themeClass = "bg-teal-50 border-teal-200 text-teal-900 border-l-8";
+                }
+
+                return (
+                  <h2 className={`text-xl font-bold mt-8 mb-4 p-4 rounded-r-xl transition-all ${themeClass}`} {...props}>
+                    {children}
+                  </h2>
+                );
+              },
+              h3: ({node, ...props}) => <h3 className="text-lg font-bold mt-6 mb-3 text-slate-800 border-b border-slate-100 pb-1" {...props} />,
+              ul: ({node, ...props}) => <ul className="list-disc list-outside ml-5 space-y-2 mb-4" {...props} />,
+              li: ({node, ...props}) => <li className="pl-1" {...props} />,
+              strong: ({node, ...props}) => <strong className="font-bold text-red-700 bg-red-50 px-1 rounded" {...props} />, 
+              p: ({node, ...props}) => <p className="mb-4 leading-relaxed px-2" {...props} />,
+            }}
+          >
+            {report}
+          </ReactMarkdown>
         </div>
 
-        {/* 加值服務區塊：確保列印時展開 */}
         <div className="print:break-inside-avoid print:mt-12">
           <ServiceCalculator 
              data={data} 
              selectedServices={selectedServices}
              onServicesChange={setSelectedServices}
           />
+        </div>
+
+        {/* Action Toolbar - Now at the end of the report */}
+        <div className="flex flex-col sm:flex-row justify-between items-center mt-12 gap-4 border-t pt-8 print:hidden share-toolbar">
+          <div className="flex gap-3">
+            <button onClick={() => window.print()} className="flex items-center text-sm bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors shadow-sm font-bold">
+              <Printer className="w-4 h-4 mr-2" />
+              列印完整報告 / PDF
+            </button>
+
+            <button 
+              onClick={handleExportToNotion}
+              disabled={isExporting}
+              className={`flex items-center text-sm font-bold px-6 py-2 rounded-lg transition-all shadow-md active:scale-95 ${
+                exportStatus === 'success' 
+                  ? 'bg-green-600 text-white' 
+                  : isExporting 
+                    ? 'bg-slate-400 text-white cursor-not-allowed'
+                    : 'bg-teal-700 text-white hover:bg-teal-800'
+              }`}
+            >
+              {isExporting ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : exportStatus === 'success' ? (
+                <Check className="w-4 h-4 mr-2" />
+              ) : (
+                <Database className="w-4 h-4 mr-2 text-teal-100" />
+              )}
+              {isExporting ? '處理中...' : exportStatus === 'success' ? '匯出成功' : '確認並匯出到 Notion'}
+            </button>
+          </div>
+
+          <button 
+            onClick={handleAssessNext}
+            className="flex items-center text-sm font-bold bg-slate-100 text-slate-600 px-6 py-2 rounded-lg border border-slate-200 hover:bg-slate-200 transition-all shadow-sm active:scale-95"
+          >
+            <UserPlus className="w-4 h-4 mr-2 text-teal-600" />
+            評估下一位
+          </button>
         </div>
       </div>
     </div>

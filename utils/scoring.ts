@@ -1,6 +1,6 @@
 
 import { QUESTIONS } from '../constants';
-import { AssessmentData, RiskLevelType } from '../types';
+import { AssessmentData, RiskLevelType, PersonalityType } from '../types';
 
 export const calculateScores = (answers: AssessmentData['answers'], ageString: string): {
   dimensions: AssessmentData['dimensions'];
@@ -56,24 +56,53 @@ export const calculateScores = (answers: AssessmentData['answers'], ageString: s
 export const calculateCrisisStatus = (crisisAnswers: Record<number, boolean>): RiskLevelType => {
   const yesCount = Object.values(crisisAnswers).filter(v => v === true).length;
   
-  // 🔴 紅燈條件
-  // 1. Q10 (計畫) 為「是」 ➔ 直接紅燈
   if (crisisAnswers[10]) return 'Red';
-  // 2. Q9 (主動意念) 為「是」 且 Q1 (剛出院) 或 Q2 (強勢受挫) 為「是」
   if (crisisAnswers[9] && (crisisAnswers[1] || crisisAnswers[2])) return 'Red';
-  // 3. 總題數回答「是」超過 6 題
   if (yesCount > 6) return 'Red';
 
-  // 🟡 黃燈條件
-  // 1. Q9 (主動意念) 為「是」 但無具體計畫
   if (crisisAnswers[9]) return 'Yellow';
-  // 2. Q8 (被動意念) 為「是」
   if (crisisAnswers[8]) return 'Yellow';
-  // 3. Q1 至 Q7 中，回答「是」達 3~5 題
   if (yesCount >= 3 && yesCount <= 5) return 'Yellow';
 
-  // 🟢 綠燈條件 (Q9, Q10必須為否且Yes數 0-2)
   return 'Green';
+};
+
+/**
+ * Heuristic logic to determine personality type based on scores and crisis answers
+ */
+export const determinePersonalityType = (data: Partial<AssessmentData>): PersonalityType => {
+  const dims = data.dimensions;
+  const crisis = data.crisisAnswers || {};
+  
+  if (!dims) return '待觀察';
+
+  // 1. 掌控攻擊型: 管理維運成本高 + 行為問題或情緒不穩
+  if (dims.management > dims.physical && (crisis[4] || crisis[10])) {
+    return '掌控攻擊型';
+  }
+  
+  // 2. 焦慮敏感型: 心理風險高 + 頻繁情緒波動或睡眠障礙
+  if (dims.mental > dims.physical && (crisis[4] || crisis[6])) {
+    return '焦慮敏感型';
+  }
+
+  // 3. 自我放逐型: 心理風險高 + 社交退縮或負向自我知覺
+  if (dims.mental > 15 && (crisis[3] || crisis[5] || crisis[8])) {
+    return '自我放逐型';
+  }
+
+  // 4. 過度補償型: 照顧模式複雜度高但心理/衝突得分相對低 (裝強)
+  if (dims.physical > 15 && crisis[2]) {
+    return '過度補償型';
+  }
+
+  // Default heuristic based on highest dimension
+  const maxDim = Math.max(dims.physical, dims.family, dims.mental, dims.management);
+  if (maxDim === dims.management) return '掌控攻擊型';
+  if (maxDim === dims.mental) return '焦慮敏感型';
+  if (dims.physical > 20) return '過度補償型';
+  
+  return '待觀察';
 };
 
 export const getRiskColorClass = (level: RiskLevelType) => {

@@ -1,8 +1,7 @@
-
 import React, { useEffect } from 'react';
 import { AssessmentData } from '../types';
 import { QUESTIONS, CRISIS_QUESTIONS } from '../constants';
-import { calculateScores, calculateCrisisStatus } from '../utils/scoring';
+import { calculateScores, calculateCrisisStatus, determinePersonalityType } from '../utils/scoring';
 import { PlayCircle, User, Activity, MessageSquare, FileText, AlertTriangle, ShieldAlert } from 'lucide-react';
 
 interface Props {
@@ -17,11 +16,13 @@ export const AssessmentForm: React.FC<Props> = ({ data, onChange, onGenerate, is
   useEffect(() => {
     const calculated = calculateScores(data.answers, data.personalDetails.age);
     const crisisStatus = calculateCrisisStatus(data.crisisAnswers);
+    const personalityType = determinePersonalityType({ ...data, ...calculated });
     
     onChange({
       ...data,
       ...calculated,
-      crisisStatus
+      crisisStatus,
+      personalityType
     });
   }, [data.answers, data.personalDetails.age, data.crisisAnswers]);
 
@@ -139,12 +140,12 @@ export const AssessmentForm: React.FC<Props> = ({ data, onChange, onGenerate, is
         />
       </section>
 
-      {/* 3. Psychological Crisis Assessment (NEW) */}
+      {/* 3. Psychological Crisis Assessment */}
       <section className={`p-5 rounded-xl border transition-colors duration-300 ${
         data.crisisStatus === 'Red' ? 'bg-red-50 border-red-200' : 
         data.crisisStatus === 'Yellow' ? 'bg-amber-50 border-amber-200' : 'bg-slate-50 border-slate-200'
       }`}>
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-4">
           <div className={`flex items-center font-bold ${data.crisisStatus === 'Red' ? 'text-red-700' : 'text-slate-700'}`}>
             {data.crisisStatus === 'Red' ? <ShieldAlert className="w-5 h-5 mr-2" /> : <AlertTriangle className="w-5 h-5 mr-2" />}
             心理危機判定 (10題)
@@ -156,6 +157,7 @@ export const AssessmentForm: React.FC<Props> = ({ data, onChange, onGenerate, is
             目前狀態：{data.crisisStatus === 'Red' ? '🔴 高度風險' : data.crisisStatus === 'Yellow' ? '🟡 中度風險' : '🟢 穩定'}
           </div>
         </div>
+        
         <p className="text-xs text-slate-500 mb-4">請依個案近兩週狀態回答「是」或「否」。</p>
 
         {data.crisisAnswers[10] && (

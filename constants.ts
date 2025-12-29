@@ -8,8 +8,9 @@ export const DIMENSION_NAMES = [
   '後續維運成本'      
 ];
 
+// 心理危機判定題庫
 export const CRISIS_QUESTIONS: CrisisQuestionConfig[] = [
-  { id: 1, category: '高危情境', text: '重大轉折事件：個案是否剛經歷住院、出院、跌倒受傷，或被診斷出新的重大疾病？' },
+  { id: 1, category: '高危情境', text: '重大轉折事件：個案是否剛經歷家人離世、住院、出院、跌倒受傷，或被診斷出新的重大疾病？' },
   { id: 2, category: '高危情境', text: '自尊受損反應：個案過去是否屬於「強勢性格」，且近期因失能而表現出極度的挫敗感、羞恥感或認為自己「沒用了」？' },
   { id: 3, category: '自我價值', text: '負向自我知覺：個案是否頻繁表達自己是家人的「累贅」、「包袱」或「只會拖累別人」？' },
   { id: 4, category: '情緒訊號', text: '極端情緒波動：個案是否出現異常的憤怒、挑剔，或是極度的焦慮、對身體症狀過度恐慌，且難以安撫？' },
@@ -19,6 +20,190 @@ export const CRISIS_QUESTIONS: CrisisQuestionConfig[] = [
   { id: 8, category: '被動意念', text: '被動自殺意念：個案是否透露「活著沒意思」、「如果睡著不再醒來就好了」或「老天怎麼不快點帶我走」的想法？' },
   { id: 9, category: '主動意念', text: '主動自殺意念：個案是否明確表示「想死」、「想自殺」，或詢問關於死亡方式的資訊？' },
   { id: 10, category: '具體計畫', text: '具體計畫與工具：個案是否持有或試圖取得危險物品（大量藥物、農藥、繩索、刀具），或已經有具體的執行計畫？' }
+];
+
+// 30題風險評估量表
+export const QUESTIONS: QuestionConfig[] = [
+  {
+    id: 1,
+    text: "進食能力（自主進食與餐具使用）",
+    weights: { low: [0, 0, 0, 0], medium: [2, 1, 0, 1], high: [5, 2, 0, 2] },
+    options: { low: "完全獨立", medium: "需切碎或提醒", high: "需人餵食" }
+  },
+  {
+    id: 2,
+    text: "移位能力（床位、輪椅與站立）",
+    weights: { low: [0, 0, 0, 0], medium: [3, 0, 2, 1], high: [6, 1, 4, 3] },
+    options: { low: "完全獨立", medium: "需單人輕微扶持", high: "需兩人或機械輔助" }
+  },
+  {
+    id: 3,
+    text: "如廁能力（如廁動作、清潔與穿脫衣物）",
+    weights: { low: [0, 0, 0, 0], medium: [3, 1, 0, 2], high: [6, 2, 1, 4] },
+    options: { low: "完全獨立", medium: "需部分協助", high: "完全依賴他人" }
+  },
+  {
+    id: 4,
+    text: "個人衛生（洗臉、刷牙、梳頭、刮鬍）",
+    weights: { low: [0, 0, 0, 0], medium: [1, 0, 0, 1], high: [3, 1, 0, 2] },
+    options: { low: "完全獨立", medium: "需部分提醒", high: "完全依賴協助" }
+  },
+  {
+    id: 5,
+    text: "洗澡能力（沐浴安全與清潔）",
+    weights: { low: [0, 0, 0, 0], medium: [2, 1, 1, 1], high: [5, 2, 2, 3] },
+    options: { low: "完全獨立", medium: "需人監測或備水", high: "需人全程協助" }
+  },
+  {
+    id: 6,
+    text: "穿脫衣服（選擇衣物與穿脫鞋襪）",
+    weights: { low: [0, 0, 0, 0], medium: [2, 0, 0, 1], high: [4, 1, 1, 2] },
+    options: { low: "完全獨立", medium: "需部分協助(如扣鈕扣)", high: "完全依賴協助" }
+  },
+  {
+    id: 7,
+    text: "大小便控制（括約肌控制）",
+    weights: { low: [0, 0, 0, 0], medium: [4, 2, 2, 2], high: [8, 4, 5, 5] },
+    options: { low: "完全正常", medium: "偶爾失禁或需導尿", high: "完全失禁或需包尿布" }
+  },
+  {
+    id: 8,
+    text: "行走平地（室內移動）",
+    weights: { low: [0, 0, 0, 0], medium: [3, 0, 2, 1], high: [6, 1, 3, 3] },
+    options: { low: "獨立步行", medium: "需輔具或他人扶持", high: "需依賴輪椅或臥床" }
+  },
+  {
+    id: 9,
+    text: "上下樓梯（階梯移動安全）",
+    weights: { low: [0, 0, 0, 0], medium: [3, 1, 3, 1], high: [7, 2, 5, 2] },
+    options: { low: "完全獨立", medium: "需扶手或人監測", high: "無法執行" }
+  },
+  {
+    id: 10,
+    text: "用藥安全（遵照醫囑服藥）",
+    weights: { low: [0, 0, 0, 0], medium: [1, 1, 2, 3], high: [2, 3, 5, 6] },
+    options: { low: "自行服藥", medium: "需人提醒", high: "需人代為管理/排藥" }
+  },
+  {
+    id: 11,
+    text: "財務管理（金錢處理與日常支出）",
+    weights: { low: [0, 0, 0, 0], medium: [0, 2, 1, 3], high: [1, 5, 3, 7] },
+    options: { low: "完全獨立", medium: "需家人協助", high: "完全由他人代管" }
+  },
+  {
+    id: 12,
+    text: "電話通訊（使用電話或社群軟體）",
+    weights: { low: [0, 0, 0, 0], medium: [0, 1, 1, 1], high: [1, 2, 2, 2] },
+    options: { low: "操作自如", medium: "僅能撥打常用號碼", high: "無法使用" }
+  },
+  {
+    id: 13,
+    text: "外出購物（日常用品購買）",
+    weights: { low: [0, 0, 0, 0], medium: [2, 1, 1, 1], high: [4, 3, 2, 2] },
+    options: { low: "自行往返", medium: "需人陪同", high: "完全無法外出" }
+  },
+  {
+    id: 14,
+    text: "家事維持（清潔整理與環境衛生）",
+    weights: { low: [0, 0, 0, 0], medium: [1, 1, 0, 2], high: [2, 2, 1, 4] },
+    options: { low: "獨立負擔", medium: "僅能輕便家務", high: "完全無法處理" }
+  },
+  {
+    id: 15,
+    text: "準備食物（煮食或簡單備餐）",
+    weights: { low: [0, 0, 0, 0], medium: [2, 1, 1, 1], high: [4, 2, 2, 2] },
+    options: { low: "自行下廚", medium: "僅能加熱或簡單食物", high: "需人準備" }
+  },
+  {
+    id: 16,
+    text: "短期記憶（最近發生的事、今日日期）",
+    weights: { low: [0, 0, 0, 0], medium: [1, 2, 3, 2], high: [2, 5, 7, 5] },
+    options: { low: "記憶力良好", medium: "偶爾忘記近期細節", high: "頻繁遺忘/無法認人" }
+  },
+  {
+    id: 17,
+    text: "空間定向感（在熟悉環境是否迷路）",
+    weights: { low: [0, 0, 0, 0], medium: [1, 3, 5, 3], high: [3, 6, 10, 6] },
+    options: { low: "方向感正常", medium: "陌生環境會混淆", high: "室內亦可能迷失" }
+  },
+  {
+    id: 18,
+    text: "判斷與邏輯（解決日常生活問題）",
+    weights: { low: [0, 0, 0, 0], medium: [0, 2, 3, 2], high: [1, 4, 6, 4] },
+    options: { low: "判斷力正常", medium: "複雜事務需人引導", high: "無法理解因果關係" }
+  },
+  {
+    id: 19,
+    text: "情緒狀態（焦慮、憂鬱、易怒）",
+    weights: { low: [0, 0, 0, 0], medium: [0, 3, 4, 2], high: [1, 6, 8, 4] },
+    options: { low: "穩定", medium: "偶有情緒困擾", high: "情緒極不穩定/影響他人" }
+  },
+  {
+    id: 20,
+    text: "行為問題（遊走、重複問話、激昂）",
+    weights: { low: [0, 0, 0, 0], medium: [1, 4, 6, 3], high: [3, 8, 12, 6] },
+    options: { low: "無特殊行為", medium: "偶有重複行為", high: "頻繁出現干擾性行為" }
+  },
+  {
+    id: 21,
+    text: "幻覺或妄想（認為有人要害他、偷東西）",
+    weights: { low: [0, 0, 0, 0], medium: [0, 5, 8, 4], high: [2, 10, 15, 8] },
+    options: { low: "無", medium: "輕微懷疑或短暫幻覺", high: "嚴重影響社交與生活" }
+  },
+  {
+    id: 22,
+    text: "家庭溝通（家屬間對照顧計畫的共識）",
+    weights: { low: [0, 0, 0, 0], medium: [0, 5, 2, 3], high: [1, 12, 4, 6] },
+    options: { low: "共識極佳", medium: "偶有意見分歧", high: "衝突頻繁/無法溝通" }
+  },
+  {
+    id: 23,
+    text: "家屬支持度（實際投入照顧的時間與意願）",
+    weights: { low: [0, 0, 0, 0], medium: [1, 4, 2, 2], high: [2, 9, 4, 4] },
+    options: { low: "全力支持", medium: "心有餘力不足", high: "無家屬支持/關係疏離" }
+  },
+  {
+    id: 24,
+    text: "居住環境安全（防滑、扶手、照明）",
+    weights: { low: [0, 0, 0, 0], medium: [2, 1, 2, 2], high: [5, 2, 4, 4] },
+    options: { low: "環境極安全", medium: "部分設施不足", high: "環境充滿危險因子" }
+  },
+  {
+    id: 25,
+    text: "跌倒風險（近三個月跌倒次數）",
+    weights: { low: [0, 0, 0, 0], medium: [4, 2, 3, 2], high: [10, 4, 6, 4] },
+    options: { low: "無跌倒紀錄", medium: "跌倒1次", high: "跌倒2次(含)以上" }
+  },
+  {
+    id: 26,
+    text: "睡眠品質（入睡難易度、半夜清醒）",
+    weights: { low: [0, 0, 0, 0], medium: [1, 2, 2, 1], high: [2, 4, 5, 3] },
+    options: { low: "良好", medium: "需助眠藥物", high: "嚴重日夜顛倒" }
+  },
+  {
+    id: 27,
+    text: "聽力或視力限制（感官退化對生活影響）",
+    weights: { low: [0, 0, 0, 0], medium: [2, 1, 2, 1], high: [4, 2, 4, 2] },
+    options: { low: "正常或有輔具補償", medium: "影響部分社交活動", high: "嚴重阻隔外界資訊" }
+  },
+  {
+    id: 28,
+    text: "溝通表達（清楚表達需求）",
+    weights: { low: [0, 0, 0, 0], medium: [1, 3, 2, 2], high: [3, 7, 4, 5] },
+    options: { low: "表達清晰", medium: "詞不達意但可理解", high: "無法有效溝通" }
+  },
+  {
+    id: 29,
+    text: "社交參與（參與社團、活動意願）",
+    weights: { low: [0, 0, 0, 0], medium: [0, 1, 2, 1], high: [1, 3, 4, 2] },
+    options: { low: "積極參與", medium: "偶爾被動參加", high: "完全封閉/拒絕社交" }
+  },
+  {
+    id: 30,
+    text: "吞嚥功能（進食嗆咳、咳痰情形）",
+    weights: { low: [0, 0, 0, 0], medium: [4, 1, 2, 2], high: [9, 2, 5, 4] },
+    options: { low: "正常", medium: "偶爾嗆咳/需調整質地", high: "頻繁嗆咳/需管餵" }
+  }
 ];
 
 export const SERVICES_CATALOG: ServiceItem[] = [
@@ -40,37 +225,4 @@ export const SERVICES_CATALOG: ServiceItem[] = [
   { id: 's_social', name: '管家互動/社交', description: '聊天、娛樂活動', price: 390, unit: '小時', calculationBasis: 'per_time', recommendedFor: [1, 2], defaultQuantity: 1 },
   { id: 's_consult', name: '家庭照顧諮詢', description: '資源連結、計畫擬定', price: 600, unit: '次', calculationBasis: 'per_time', recommendedFor: [1, 3], defaultQuantity: 1 },
   { id: 's_errand', name: '代購/代辦', description: '購物、領藥', price: 390, unit: '小時', calculationBasis: 'per_time', recommendedFor: [0, 1], defaultQuantity: 1 },
-];
-
-export const QUESTIONS: QuestionConfig[] = [
-  { id: 1, text: '需要看護協助的程度為何？', weights: { low: [1,0,2,1], medium: [3,1,3,2], high: [5,3,5,4] }, options: { low: '1-4HR/D', medium: '5-12HR', high: '13-24HR' } },
-  { id: 2, text: '受照顧者目前失能程度為何？', weights: { low: [1,0,0,0], medium: [3,1,1,1], high: [6,1,2,2] }, options: { low: '助行器', medium: '行走困難', high: '臥床' } },
-  { id: 3, text: '輕微失智傾向（低度）或已有明確低中高度診斷？', weights: { low: [2,0,0,1], medium: [4,1,2,2], high: [7,2,4,3] }, options: { low: '傾向或輕度', medium: '中度或中重度', high: '重度' } },
-  { id: 4, text: '抗拒他人照顧行為的強度有多高？', weights: { low: [2,0,1,0], medium: [4,1,4,2], high: [5,2,6,3] }, options: { low: '不悅但配合', medium: '偶爾會拒絕', high: '完全抗拒' } },
-  { id: 5, text: '家庭成員是否有溝通不良情況，負面程度為何？', weights: { low: [0,1,0,0], medium: [1,3,2,1], high: [2,5,3,2] }, options: { low: '時好時壞', medium: '不願或勉強配合', high: '時常爭吵' } },
-  { id: 6, text: '是否有特殊醫療或長照資源的追蹤？', weights: { low: [1,0,0,1], medium: [2,0,1,3], high: [4,1,2,5] }, options: { low: '偶有就醫但無持續依賴(高血壓、糖尿病)', medium: '穩定醫療要定期追蹤', high: '高度依賴生活維持' } },
-  { id: 7, text: '經常性緊急通報頻率為何（跌倒、走失等）？', weights: { low: [1,0,0,1], medium: [3,1,2,2], high: [5,1,4,4] }, options: { low: '一月一次', medium: '一周一次', high: '每日發生' } },
-  { id: 8, text: '照顧的類型多元程度為何？', weights: { low: [0,1,0,1], medium: [1,2,1,2], high: [2,4,2,3] }, options: { low: '2類以下', medium: '2-5類', high: '6類以上' } },
-  { id: 9, text: '是否具有精神、情緒或成癮議題？', weights: { low: [0,0,0,0], medium: [2,0,1,1], high: [4,2,5,3] }, options: { low: '情緒起伏但可調節', medium: '對生活產生影響', high: '影響安全與判斷' } },
-  { id: 10, text: '個案過去暴力行為或危機介入的嚴重程度？', weights: { low: [1,0,1,2], medium: [2,1,3,2], high: [3,2,6,4] }, options: { low: '有但無威脅性', medium: '需安撫但無傷害', high: '難以阻止' } },
-  { id: 11, text: '夜間照顧與守夜的需求程度？', weights: { low: [1,0,0,1], medium: [3,0,1,2], high: [5,0,2,4] }, options: { low: '一周一次', medium: '一周三次下', high: '每天' } },
-  { id: 12, text: '失蹤、走失經驗危險程度？', weights: { low: [1,1,0,1], medium: [2,1,2,1], high: [4,2,4,3] }, options: { low: '有意識找支援', medium: '無意識移動', high: '完全無認知' } },
-  { id: 13, text: '藥品及管理必要程度？', weights: { low: [0,0,0,0], medium: [1,0,0,1], high: [3,1,1,2] }, options: { low: '不愛吃藥', medium: '忘記用藥', high: '自決用藥' } },
-  { id: 14, text: '對於他人攻擊行為的強度？', weights: { low: [1,0,0,1], medium: [3,1,4,2], high: [5,2,6,3] }, options: { low: '口頭程度', medium: '物理程度', high: '公危程度' } },
-  { id: 15, text: '常態性管路照護的強度？', weights: { low: [2,0,0,1], medium: [4,0,0,2], high: [6,0,1,4] }, options: { low: '簡易穩定', medium: '需更換清潔', high: '多項管路' } },
-  { id: 16, text: '跨系統轉介或社工長期介入的強度？', weights: { low: [0,1,0,1], medium: [1,2,1,2], high: [2,4,2,3] }, options: { low: '低度諮詢', medium: '短期跨單位', high: '多系統介入' } },
-  { id: 17, text: '抗拒參與集體活動的程度？', weights: { low: [0,1,0,0], medium: [2,2,0,1], high: [3,3,1,2] }, options: { low: '願嘗試但被動', medium: '明確不參加', high: '拒絕且具敵意' } },
-  { id: 18, text: '家庭的經濟負擔與壓力程度？', weights: { low: [0,1,0,1], medium: [1,2,1,2], high: [2,3,2,3] }, options: { low: '偶擔憂', medium: '維持基本', high: '入不敷出' } },
-  { id: 19, text: '是否曾與照服或醫護產生糾紛？', weights: { low: [0,1,1,0], medium: [1,2,2,1], high: [2,4,3,2] }, options: { low: '發生不影響', medium: '協調後改善', high: '影響服務' } },
-  { id: 20, text: '是否有自傷或自殺傾向歷史？', weights: { low: [0,0,1,1], medium: [2,0,2,1], high: [3,1,5,3] }, options: { low: '期望低', medium: '自傷言語', high: '明確行為' } },
-  { id: 21, text: '原同住家屬分屬不同城市或國家？', weights: { low: [0,1,0,0], medium: [1,3,1,2], high: [1,5,2,3] }, options: { low: '不到一半', medium: '一半以上', high: '全部' } },
-  { id: 22, text: '家庭代間衝突的情況？', weights: { low: [0,1,1,0], medium: [1,2,2,1], high: [2,4,3,2] }, options: { low: '意見不同', medium: '角色衝突', high: '嚴重衝突' } },
-  { id: 23, text: '需要個人化輔助設備程度？', weights: { low: [1,1,0,1], medium: [3,2,1,2], high: [5,2,2,5] }, options: { low: '基本輔具', medium: '特定輔具', high: '多項專業輔具' } },
-  { id: 24, text: '是否需定期復健或醫療介入的頻率？', weights: { low: [1,0,0,0], medium: [2,0,0,2], high: [3,0,1,3] }, options: { low: '偶爾', medium: '定期', high: '高頻' } },
-  { id: 25, text: '是否需備用照顧人力或替班？', weights: { low: [0,1,0,0], medium: [1,2,1,1], high: [2,4,2,3] }, options: { low: '無固定', medium: '偶爾請假', high: '完全不能離開' } },
-  { id: 26, text: '是否有長照2.0相關補助使用？', weights: { low: [0,0,0,0], medium: [1,1,1,1], high: [2,2,1,2] }, options: { low: '1-3級', medium: '4-6級', high: '7-8級' } },
-  { id: 27, text: '是否需要明確照顧計畫與文件？', weights: { low: [0,0,0,1], medium: [1,1,1,2], high: [2,3,2,3] }, options: { low: '無需詳細', medium: '基本指引', high: '完整計畫' } },
-  { id: 28, text: '是否曾涉及法律相關事件？', weights: { low: [0,1,0,1], medium: [1,2,1,2], high: [2,4,3,2] }, options: { low: '證人', medium: '民事', high: '刑事' } },
-  { id: 29, text: '是否具宗教或文化照護需求？', weights: { low: [0,0,0,0], medium: [1,1,1,1], high: [2,2,2,2] }, options: { low: '需求低', medium: '需留意', high: '特別配套' } },
-  { id: 30, text: '個案是否有不實指控紀錄？', weights: { low: [1,1,2,1], medium: [2,2,3,2], high: [3,3,5,3] }, options: { low: '個人誤解', medium: '不實指控', high: '明確控訴' } },
 ];
