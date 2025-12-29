@@ -5,22 +5,21 @@ import { QUESTIONS, DIMENSION_NAMES, CRISIS_QUESTIONS } from "../constants";
 import { getDimensionRiskLevel } from "../utils/scoring";
 
 /**
- * 依照使用者要求設定模型嘗試順序（Fallback Sequence）
- * 當前一模型額度用盡或出錯時，依序嘗試
+ * 依照官方規範與穩定度設定模型嘗試順序
+ * 優先使用 Gemini 3 系列，其次為穩定版 Flash 系列
  */
 const MODELS_TO_TRY = [
-  'gemini-2.5-flash-latest',
-  'gemini-flash-lite-latest',
-  'gemini-2.5-flash-preview-tts',
   'gemini-3-flash-preview',
-  'gemini-robotics-er-1.5-preview',
-  'gemma-3-12b'
+  'gemini-flash-latest',
+  'gemini-flash-lite-latest',
+  'gemini-3-pro-preview'
 ];
 
 export const generateCareAdvice = async (data: AssessmentData): Promise<string> => {
-  // 直接使用環境變數中的 API_KEY
-  if (!process.env.API_KEY) {
-    throw new Error("偵測不到 API 金鑰 (API_KEY is missing)。請確保系統環境變數配置正確。");
+  // 1. 強制檢查 API 金鑰
+  const apiKey = process.env.API_KEY;
+  if (!apiKey || apiKey === 'undefined') {
+    throw new Error("系統偵測不到 API 金鑰。請確保環境變數 'API_KEY' 已正確配置。");
   }
 
   const detectedCrisis = Object.entries(data.crisisAnswers)
@@ -84,15 +83,14 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
 
   let lastError: any = null;
 
-  // 遍歷所有指定的模型進行嘗試
+  // 2. 開始嘗試模型序列
   for (const modelName of MODELS_TO_TRY) {
     try {
-      console.log(`正在嘗試使用模型: ${modelName}`);
+      console.log(`[Gemini] 正在嘗試調用模型: ${modelName}`);
       
-      // 規範要求：每次發起請求前都要新建 GoogleGenAI 實例
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const ai = new GoogleGenAI({ apiKey });
       
-      // 只有 Gemini 3 和 2.5 系列支援 thinkingConfig
+      // 只有 Gemini 3 系列與 2.5 系列支援 thinkingConfig
       const supportsThinking = modelName.includes('gemini-3') || modelName.includes('gemini-2.5');
       
       const response = await ai.models.generateContent({
@@ -105,18 +103,22 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
       });
       
       if (response && response.text) {
-        console.log(`模型 ${modelName} 成功生成報告。`);
+        console.log(`[Gemini] 模型 ${modelName} 成功回應！`);
         return response.text;
       }
     } catch (error: any) {
       lastError = error;
-      console.warn(`模型 ${modelName} 呼叫失敗，嘗試下一個。錯誤訊息: ${error.message}`);
+      console.warn(`[Gemini] 模型 ${modelName} 失敗: ${error.message}`);
       
-      // 如果是因為 API Key 無效等不可恢復的錯誤，可能需要考慮是否繼續。
-      // 但根據使用者需求，我們依序嘗試完整個列表。
+      // 如果是 API Key 錯誤，直接拋出不進入備援
+      if (error.message.includes('API_KEY_INVALID') || error.message.includes('403')) {
+        throw new Error("API 金鑰無效，請檢查 Google AI Studio 金鑰是否正確。");
+      }
+      
+      // 其他錯誤（如 404, 429, 500）繼續嘗試下一個模型
     }
   }
 
-  // 如果所有模型都失敗了
-  throw new Error(`所有模型 (${MODELS_TO_TRY.join(', ')}) 嘗試均失敗。最後一個錯誤: ${lastError?.message || "未知錯誤"}`);
+  // 3. 全數失敗
+  throw new Error(`所有模型嘗試均失敗。最後一項錯誤：${lastError?.message || "網路通訊異常"}`);
 };
