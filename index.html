@@ -30,7 +30,7 @@
       
       @media print {
         @page {
-          margin: 1cm;
+          margin: 1.5cm;
           size: auto;
         }
         html, body {
@@ -41,8 +41,9 @@
           print-color-adjust: exact;
         }
         /* 隱藏非必要元素 */
-        header, .lg\:col-span-5, .print\:hidden, button, .share-toolbar, .no-print {
+        header, .lg\:col-span-5, .print\:hidden, button, .share-toolbar, .no-print, .sticky {
           display: none !important;
+          position: static !important;
         }
         /* 使報告區域佔滿全寬並展開內容 */
         .lg\:col-span-7 {
@@ -58,9 +59,10 @@
             margin: 0 !important;
         }
         /* 強制展開所有捲動容器，避免被裁切 */
-        .overflow-y-auto, .overflow-hidden, [class*="max-h-"] {
+        .overflow-y-auto, .overflow-hidden, [class*="max-h-"], [class*="min-h-"] {
             overflow: visible !important;
             max-height: none !important;
+            min-height: 0 !important;
             height: auto !important;
             display: block !important;
         }
@@ -76,14 +78,20 @@
             break-inside: avoid !important;
             page-break-inside: avoid !important;
         }
-        .print\:mt-8 {
-            margin-top: 2rem !important;
+        .print\:mt-12 {
+            margin-top: 3rem !important;
         }
         /* 確保表格內容完整 */
         .service-list-container {
-            display: flex !important;
-            flex-direction: column !important;
-            gap: 0.5rem !important;
+            display: block !important;
+            overflow: visible !important;
+        }
+        /* 強化總計區塊在列印時的可視度 */
+        .print\:total-box {
+            background-color: #fee2e2 !important; /* 淺紅背景 */
+            border: 2px solid #ef4444 !important;
+            padding: 1.5rem !important;
+            break-inside: avoid !important;
         }
       }
     </style>
