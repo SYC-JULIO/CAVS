@@ -4,7 +4,7 @@ import { AssessmentForm } from './components/AssessmentForm';
 import { ReportViewer } from './components/ReportViewer';
 import { generateCareAdvice } from './services/geminiService';
 import { AssessmentData } from './types';
-import { Activity, AlertCircle, Clock, HelpCircle } from 'lucide-react';
+import { Activity, AlertCircle, Clock, HelpCircle, Key } from 'lucide-react';
 
 const INITIAL_DATA: AssessmentData = {
   personalDetails: { name: '', gender: '', age: '', contact: '', roomNumber: '' },
@@ -32,29 +32,44 @@ const App: React.FC = () => {
     setReport(null);
     
     try {
+      // 根據規範：檢查是否有選過 Key，若無則開啟對話框
+      // @ts-ignore
+      if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
+        // @ts-ignore
+        const hasKey = await window.aistudio.hasSelectedApiKey();
+        if (!hasKey) {
+          // @ts-ignore
+          await window.aistudio.openSelectKey();
+          // 規範要求：觸發後應視為成功並繼續，不在此 return
+        }
+      }
+
       const result = await generateCareAdvice(data);
       setReport(result);
     } catch (err: any) {
-      console.error("Generation Error:", err);
+      console.error("Analysis Failed:", err);
       
       if (err.message === "AUTH_REQUIRED") {
+        // 如果執行中發現 Key 失效或缺失
         // @ts-ignore
         if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
            // @ts-ignore
-           window.aistudio.openSelectKey();
-           setError("請在彈出的視窗中完成 API 金鑰設定後，再試一次。");
+           await window.aistudio.openSelectKey();
+           setError("請在視窗中選擇具備權限的 API 金鑰（建議使用付費專案金鑰）。");
         } else {
-           setError("偵測不到有效的 API 金鑰。請確認環境變數 API_KEY 已正確設定。");
+           setError("環境變數 API_KEY 未正確配置或已過期，請確認系統設定。");
         }
         setIsLoading(false);
         return;
       }
 
-      let errorMessage = err.message || '發生未知錯誤';
-      if (errorMessage.includes('今日免費額度已用完')) {
+      const errorMessage = err.message || '連線逾時或發生未知錯誤';
+      if (errorMessage.includes('額度已用完') || errorMessage.includes('429')) {
           setIsQuotaError(true);
+          setError("當前免費配額已達上限，請稍後再試。");
+      } else {
+          setError(errorMessage);
       }
-      setError(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -73,11 +88,17 @@ const App: React.FC = () => {
               <p className="text-[10px] text-slate-400 font-mono uppercase tracking-widest">Resident Status Assessment System</p>
             </div>
           </div>
-          <div className="hidden md:flex items-center space-x-6">
-            <div className="flex flex-col items-end">
-               <span className="text-xs font-bold text-slate-600 uppercase tracking-tight">住戶狀態評估｜心理狀態評估｜決策支援</span>
-            </div>
-            <div className="h-8 w-px bg-slate-200"></div>
+          <div className="flex items-center space-x-4">
+            <button 
+              onClick={() => {
+                // @ts-ignore
+                if (window.aistudio) window.aistudio.openSelectKey();
+              }}
+              className="p-2 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-teal-600"
+              title="更新 API 金鑰設定"
+            >
+              <Key className="w-5 h-5" />
+            </button>
             <HelpCircle className="w-5 h-5 text-slate-300 cursor-help hover:text-teal-600 transition-colors" />
           </div>
         </div>
@@ -85,9 +106,10 @@ const App: React.FC = () => {
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* 左側：評估輸入 */}
           <div className="lg:col-span-5">
             <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden sticky top-24 ring-1 ring-slate-100">
-              <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex justify-between items-center">
+              <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
                 <h2 className="text-lg font-black text-slate-800 flex items-center">
                   <span className="w-6 h-6 bg-slate-800 text-white rounded-full flex items-center justify-center text-xs mr-2">1</span>
                   評估資料輸入
@@ -104,6 +126,7 @@ const App: React.FC = () => {
             </div>
           </div>
 
+          {/* 右側：報告呈現 */}
           <div className="lg:col-span-7">
              <div className="bg-white rounded-2xl shadow-xl border border-slate-200 h-full min-h-[700px] flex flex-col overflow-hidden ring-1 ring-teal-50">
                <div className="bg-teal-600 px-6 py-5 border-b border-teal-700">
