@@ -20,12 +20,17 @@ const MODELS_TO_TRY = [
 
 export const generateCareAdvice = async (data: AssessmentData): Promise<string> => {
   // 1. 取得並檢查 API 金鑰 (由系統環境注入)
-  const apiKey = process.env.API_KEY;
 
-  if (!apiKey || apiKey === 'undefined') {
-    throw new Error("系統偵測不到 API 金鑰。請確認環境變數 'API_KEY' 配置正確。");
-  }
+// 在 Vite 專案中，這是唯一官方支援且穩定的讀取方式
+const apiKey = import.meta.env.VITE_GOOGLE_API_KEY;
 
+if (!apiKey || apiKey === 'undefined') {
+  // 這行是用來 debug 的，如果部署後看到這行，代表環境變數沒寫進去
+  console.error("Critical Error: VITE_GOOGLE_API_KEY is missing in import.meta.env");
+  throw new Error("系統偵測不到 API 金鑰。請確認 Render 環境變數為 'VITE_GOOGLE_API_KEY'。");
+}
+
+  
   // 2. 格式化評估數據
   const detectedCrisis = Object.entries(data.crisisAnswers || {})
     .filter(([_, val]) => val === true)
