@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Bot, FileText, Printer, Check, ShieldAlert, AlertTriangle, ShieldCheck, Share, Link, Loader2 } from 'lucide-react';
+import { Bot, FileText, Printer, Check, ShieldAlert, AlertTriangle, ShieldCheck, Share2, Link, Loader2, Database } from 'lucide-react';
 import { AssessmentData, SelectedService } from '../types';
 import { RadarChart } from './RadarChart';
 import { ServiceCalculator } from './ServiceCalculator';
@@ -20,7 +20,6 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
   const [isExporting, setIsExporting] = useState(false);
   const [exportStatus, setExportStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
-  // Sync webhook URL to local storage for convenience
   useEffect(() => {
     localStorage.setItem('make_webhook_url', webhookUrl);
   }, [webhookUrl]);
@@ -88,7 +87,6 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
     setIsExporting(true);
     setExportStatus('idle');
 
-    // Calculate total for payload
     let monthlyTotal = 0;
     selectedServices.forEach(s => {
       const dailyUnitPrice = s.unit === '月' ? s.price / 30 : s.price;
@@ -143,18 +141,17 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
   return (
     <div className="max-w-none relative pb-10">
       
-      {/* Webhook Configuration & Toolbar */}
+      {/* Notion Integration Toolbar */}
       <div className="space-y-4 mb-6 print:hidden">
-        {/* Webhook URL Input Space */}
         <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 flex flex-col sm:flex-row gap-3 items-center">
           <div className="flex items-center text-slate-500 shrink-0">
             <Link className="w-4 h-4 mr-2" />
-            <span className="text-xs font-bold uppercase tracking-wider">Webhook 設定</span>
+            <span className="text-xs font-bold uppercase tracking-wider">Make.com Webhook</span>
           </div>
           <input 
             type="text"
-            placeholder="在此貼上 Make.com Webhook URL (例如 https://hook.us1.make.com/...)"
-            className="flex-1 text-xs border border-slate-300 rounded px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500"
+            placeholder="請在此輸入 Webhook URL..."
+            className="flex-1 text-xs border border-slate-300 rounded px-3 py-2 outline-none focus:ring-2 focus:ring-teal-500 transition-all bg-white"
             value={webhookUrl}
             onChange={(e) => setWebhookUrl(e.target.value)}
           />
@@ -163,13 +160,13 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
         <div className="flex justify-between items-center">
           <button onClick={() => window.print()} className="flex items-center text-sm bg-white border border-slate-200 text-slate-600 px-4 py-2 rounded-lg hover:bg-slate-50 transition-colors shadow-sm">
             <Printer className="w-4 h-4 mr-2" />
-            列印報告 / PDF
+            列印 / PDF
           </button>
 
           <button 
             onClick={handleExportToNotion}
             disabled={isExporting}
-            className={`flex items-center text-sm font-bold px-5 py-2 rounded-lg transition-all shadow-md active:scale-95 ${
+            className={`flex items-center text-sm font-bold px-6 py-2 rounded-lg transition-all shadow-md active:scale-95 ${
               exportStatus === 'success' 
                 ? 'bg-green-600 text-white' 
                 : isExporting 
@@ -182,14 +179,14 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
             ) : exportStatus === 'success' ? (
               <Check className="w-4 h-4 mr-2" />
             ) : (
-              <Share className="w-4 h-4 mr-2" />
+              <Database className="w-4 h-4 mr-2" />
             )}
-            {isExporting ? '匯出中...' : exportStatus === 'success' ? '已成功匯出至 Notion' : '確認並匯出到 Notion'}
+            {isExporting ? '處理中...' : exportStatus === 'success' ? '匯出成功' : '確認並匯出到 Notion'}
           </button>
         </div>
       </div>
 
-      {/* 心理危機快速預警看板 */}
+      {/* Psychological Crisis Banner */}
       <div className={`mb-6 p-4 rounded-xl border-2 flex items-center gap-4 ${
         data.crisisStatus === 'Red' ? 'bg-red-50 border-red-200 text-red-800' :
         data.crisisStatus === 'Yellow' ? 'bg-amber-50 border-amber-200 text-amber-800' : 'bg-green-50 border-green-200 text-green-800'
@@ -203,8 +200,8 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
         </div>
         <div>
           <h3 className="font-black text-lg">心理危機判定：{
-            data.crisisStatus === 'Red' ? '高度危險 (立即介入)' : 
-            data.crisisStatus === 'Yellow' ? '中度風險 (密切觀察)' : '穩定 (持續監測)'
+            data.crisisStatus === 'Red' ? '高度危險' : 
+            data.crisisStatus === 'Yellow' ? '中度風險' : '穩定'
           }</h3>
           <p className="text-sm opacity-90 font-medium">
             {data.crisisStatus === 'Red' ? '指令：通知家屬，24小時不離人，移除危險物品。' : 
@@ -218,7 +215,7 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data }) => {
       <div className="prose prose-slate prose-headings:text-teal-900 prose-p:text-slate-700 prose-strong:text-slate-900 prose-li:text-slate-700 max-w-none">
         <div className="flex items-center space-x-2 mb-6 pb-4 border-b border-slate-100">
           <Bot className="w-5 h-5 text-teal-600" />
-          <span className="text-xs font-semibold text-teal-600 uppercase tracking-wider">AI 綜合分析專家</span>
+          <span className="text-xs font-semibold text-teal-600 uppercase tracking-wider">AI 生活管家分析報告</span>
         </div>
         
         <ReactMarkdown

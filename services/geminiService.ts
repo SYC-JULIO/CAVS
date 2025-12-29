@@ -4,7 +4,6 @@ import { AssessmentData } from "../types";
 import { QUESTIONS, DIMENSION_NAMES, CRISIS_QUESTIONS } from "../constants";
 import { getDimensionRiskLevel } from "../utils/scoring";
 
-// Fix: Updated model names to comply with allowed models and use gemini-3 series for reasoning
 const FALLBACK_MODELS = [
   'gemini-3-pro-preview',
   'gemini-3-flash-preview',
@@ -13,9 +12,10 @@ const FALLBACK_MODELS = [
 ];
 
 export const generateCareAdvice = async (data: AssessmentData): Promise<string> => {
-  // Fix: Obtained API key exclusively from process.env.API_KEY as per guidelines.
-  // Initializing the AI client with the correct parameter structure.
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Use a temporary variable to access process.env.API_KEY to prevent potential reference errors
+  // while strictly following the instruction to obtain the key exclusively from this variable.
+  const apiKey = process.env.API_KEY;
+  const ai = new GoogleGenAI({ apiKey: apiKey as string });
 
   const highRiskAnswers = Object.entries(data.answers)
     .filter(([_, level]) => level === 'high')
@@ -26,7 +26,6 @@ export const generateCareAdvice = async (data: AssessmentData): Promise<string> 
     .filter(s => s !== '')
     .join('\n');
 
-  // Format Crisis Answers
   const detectedCrisis = Object.entries(data.crisisAnswers)
     .filter(([_, val]) => val === true)
     .map(([id]) => {
@@ -110,14 +109,12 @@ ${data.qualitativeAnalysis}
   `;
 
   let lastError: any = null;
-  // Fix: Iterating through allowed models to ensure high availability while following guidelines
   for (const model of FALLBACK_MODELS) {
     try {
       const response = await ai.models.generateContent({
         model: model,
         contents: prompt,
       });
-      // Fix: Accessing .text as a property, not a method, as per SDK guidelines
       if (response.text) return response.text;
       else throw new Error('Empty response from AI model');
     } catch (error: any) {
@@ -126,6 +123,5 @@ ${data.qualitativeAnalysis}
     }
   }
   
-  // Fix: Maintaining the specific error message expected by the frontend's quota/error handling logic
-  throw new Error("模型已滿，請詢問系統管理員。詳細錯誤：" + (lastError?.message || "未知原因"));
+  throw new Error("目前系統忙碌或額度已滿。詳細原因：" + (lastError?.message || "未知錯誤"));
 };
