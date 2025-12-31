@@ -186,12 +186,12 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data, onReset
       </div>
 
       <div className="bg-white border-x border-b border-slate-200 p-8 rounded-b-xl print:border-none print:p-0">
-        {/* Personal Details Row for Report */}
+        {/* Personal Details Row for Report - Updated Sequence: Name -> Room -> Age -> Assessor */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm font-medium text-slate-600">
-          <div><span className="text-slate-400 text-[10px] uppercase block">評估人</span> {data.personalDetails.assessor || '-'}</div>
           <div><span className="text-slate-400 text-[10px] uppercase block">姓名</span> {data.personalDetails.name}</div>
           <div><span className="text-slate-400 text-[10px] uppercase block">房間</span> {data.personalDetails.roomNumber || '-'}</div>
           <div><span className="text-slate-400 text-[10px] uppercase block">年齡</span> {data.personalDetails.age} 歲</div>
+          <div><span className="text-slate-400 text-[10px] uppercase block">評估人</span> {data.personalDetails.assessor || '-'}</div>
         </div>
 
         <div className={`mb-6 p-4 rounded-xl border-2 flex items-center gap-4 ${
@@ -239,7 +239,6 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data, onReset
             
             <section>
               <h2 className={`text-xl font-bold p-4 rounded-r-xl ${getSectionTheme(data.riskLevel)}`}>風險管理策略</h2>
-              {/* Fixed undefined variable mdMarkdown by replacing it with mdComponents */}
               <ReactMarkdown components={mdComponents}>{report.riskStrategy}</ReactMarkdown>
             </section>
 

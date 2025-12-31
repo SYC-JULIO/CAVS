@@ -72,7 +72,9 @@ export const determinePersonalityType = (data: Partial<AssessmentData>): Persona
   const crisis = data.crisisAnswers || {};
   const answers = data.answers || {};
   
-  if (!dims) return '待觀察';
+  // 基礎保底類型，防止極端空資料情況
+  const defaultFallback: PersonalityType = '過度補償型';
+  if (!dims) return defaultFallback;
 
   // 定義各型態對應的關鍵題目 ID (風險評估 30 題)
   const keys = {
@@ -104,28 +106,24 @@ export const determinePersonalityType = (data: Partial<AssessmentData>): Persona
   }
 
   // 2. 綜合判斷 (維度分數 + 關鍵題權重)
-  // 掌控攻擊型：管理成本高且關鍵題多
   if (dims.management > 15 && weights.dominating >= 2) return '掌控攻擊型';
-  
-  // 焦慮敏感型：心理風險高且關鍵題多
   if (dims.mental > 15 && weights.anxious >= 3) return '焦慮敏感型';
-  
-  // 自我放逐型：關鍵題顯著
   if (weights.withdrawn >= 4 || (dims.mental > 15 && weights.withdrawn >= 2)) return '自我放逐型';
-  
-  // 過度補償型：生理風險高且關鍵題多
   if (dims.physical > 15 && weights.compensating >= 3) return '過度補償型';
 
-  // 3. 決勝點判定
-  const maxWeight = Math.max(weights.dominating, weights.anxious, weights.withdrawn, weights.compensating);
-  if (maxWeight >= 3) {
-    if (weights.dominating === maxWeight) return '掌控攻擊型';
-    if (weights.anxious === maxWeight) return '焦慮敏感型';
-    if (weights.withdrawn === maxWeight) return '自我放逐型';
-    return '過度補償型';
-  }
+  // 3. 最終判定：選取獲得配分（關鍵題權重）最高的類別
+  const weightEntries = [
+    { type: '掌控攻擊型' as PersonalityType, weight: weights.dominating },
+    { type: '焦慮敏感型' as PersonalityType, weight: weights.anxious },
+    { type: '自我放逐型' as PersonalityType, weight: weights.withdrawn },
+    { type: '過度補償型' as PersonalityType, weight: weights.compensating }
+  ];
 
-  return '待觀察';
+  // 排序：權重由高到低
+  weightEntries.sort((a, b) => b.weight - a.weight);
+  
+  // 返回權重最高者，不再返回「待觀察」
+  return weightEntries[0].type;
 };
 
 export const getRiskColorClass = (level: RiskLevelType) => {
@@ -141,4 +139,4 @@ export const getDimensionRiskLevel = (score: number): RiskLevelType => {
   if (score >= 26) return 'Red';
   if (score >= 11) return 'Yellow';
   return 'Green';
-};
+}
