@@ -70,30 +70,61 @@ export const calculateCrisisStatus = (crisisAnswers: Record<number, boolean>): R
 export const determinePersonalityType = (data: Partial<AssessmentData>): PersonalityType => {
   const dims = data.dimensions;
   const crisis = data.crisisAnswers || {};
+  const answers = data.answers || {};
   
   if (!dims) return '待觀察';
 
-  if (dims.management > dims.physical && (crisis[4] || crisis[10])) {
-    return '掌控攻擊型';
+  // 定義各型態對應的關鍵題目 ID (風險評估 30 題)
+  const keys = {
+    dominating: [4, 22, 14, 10, 19, 30],
+    anxious: [2, 3, 4, 5, 8, 9, 20, 11, 13, 27, 25, 29, 30],
+    withdrawn: [1, 3, 8, 6, 24, 11, 13, 15, 23, 17],
+    compensating: [4, 8, 22, 9, 12, 27, 16, 19, 30]
+  };
+
+  // 計算每個型態勾選中/高的題目數量
+  const getWeight = (ids: number[]) => {
+    return ids.reduce((count, id) => {
+      const val = answers[id];
+      return (val === 'medium' || val === 'high') ? count + 1 : count;
+    }, 0);
+  };
+
+  const weights = {
+    dominating: getWeight(keys.dominating),
+    anxious: getWeight(keys.anxious),
+    withdrawn: getWeight(keys.withdrawn),
+    compensating: getWeight(keys.compensating)
+  };
+
+  // 1. 優先考慮心理危機的極端表現
+  if (crisis[10] || crisis[9] || crisis[4]) {
+    if (weights.dominating > 2) return '掌控攻擊型';
+    if (weights.anxious > 3) return '焦慮敏感型';
   }
+
+  // 2. 綜合判斷 (維度分數 + 關鍵題權重)
+  // 掌控攻擊型：管理成本高且關鍵題多
+  if (dims.management > 15 && weights.dominating >= 2) return '掌控攻擊型';
   
-  if (dims.mental > dims.physical && (crisis[4] || crisis[6])) {
-    return '焦慮敏感型';
-  }
+  // 焦慮敏感型：心理風險高且關鍵題多
+  if (dims.mental > 15 && weights.anxious >= 3) return '焦慮敏感型';
+  
+  // 自我放逐型：關鍵題顯著
+  if (weights.withdrawn >= 4 || (dims.mental > 15 && weights.withdrawn >= 2)) return '自我放逐型';
+  
+  // 過度補償型：生理風險高且關鍵題多
+  if (dims.physical > 15 && weights.compensating >= 3) return '過度補償型';
 
-  if (dims.mental > 15 && (crisis[3] || crisis[5] || crisis[8])) {
-    return '自我放逐型';
-  }
-
-  if (dims.physical > 15 && crisis[2]) {
+  // 3. 決勝點判定
+  const maxWeight = Math.max(weights.dominating, weights.anxious, weights.withdrawn, weights.compensating);
+  if (maxWeight >= 3) {
+    if (weights.dominating === maxWeight) return '掌控攻擊型';
+    if (weights.anxious === maxWeight) return '焦慮敏感型';
+    if (weights.withdrawn === maxWeight) return '自我放逐型';
     return '過度補償型';
   }
 
-  const maxDim = Math.max(dims.physical, dims.family, dims.mental, dims.management);
-  if (maxDim === dims.management) return '掌控攻擊型';
-  if (maxDim === dims.mental) return '焦慮敏感型';
-  if (dims.physical > 20) return '過度補償型';
-  
   return '待觀察';
 };
 

@@ -29,9 +29,9 @@ export const QUESTIONS: QuestionConfig[] = [
     options: { none: "無/未選", low: "輕微", medium: "中等", high: "嚴重" },
     descriptions: { 
       none: "無看護", 
-      low: "每天 1-5 HR", 
-      medium: "每天 6-12 HR", 
-      high: "每天 13-24 HR" 
+      low: "每天1-5HR", 
+      medium: "每天6-12HR", 
+      high: "每天13-24HR" 
     }
   },
   {
@@ -210,7 +210,7 @@ export const QUESTIONS: QuestionConfig[] = [
     id: 30, part: "第五部分：法律、經濟與社會資源", text: "個案是否有對照顧人員提出不實指控紀錄？",
     weights: { none: [0,0,0,0], low: [0,1,2,3], medium: [1,2,5,6], high: [2,4,10,12] },
     options: { none: "無/良好", low: "輕微", medium: "中等", high: "嚴重" },
-    descriptions: { none: "無。", low: "記憶模糊導致的誤會（如以為錢包不見）。", medium: "曾指控偷竊或虐待，經查證為誤會，但頻率較高。", high: "習慣性妄想並報警指控照顧者，造成照顧者極大法律風險。" }
+    descriptions: { none: "無。", low: "記憶模糊導致的誤會（如以為錢包不見）。", medium: "曾指控偷竊或虐待，經查證為誤會，但頻率較高。", high: "習慣性妄望並報警指控照顧者，造成照顧者極大法律風險。" }
   }
 ];
 

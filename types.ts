@@ -8,6 +8,13 @@ export interface PersonalDetails {
   age: string;
   contact: string;
   roomNumber: string;
+  assessor: string; // 新增評估人
+}
+
+export interface ReportParts {
+  crisisAdvice: string;
+  riskStrategy: string;
+  benefitAnalysis: string;
 }
 
 export interface QuestionConfig {

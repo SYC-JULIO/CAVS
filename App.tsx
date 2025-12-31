@@ -1,12 +1,14 @@
+
 import React, { useState, useCallback } from 'react';
 import { AssessmentForm } from './components/AssessmentForm';
 import { ReportViewer } from './components/ReportViewer';
 import { generateCareAdvice } from './services/geminiService';
-import { AssessmentData } from './types';
+import { AssessmentData, ReportParts } from './types';
 import { Activity, AlertCircle, Clock, HelpCircle, Terminal } from 'lucide-react';
 
 const INITIAL_DATA: AssessmentData = {
-  personalDetails: { name: '', gender: '', age: '', contact: '', roomNumber: '' },
+  // Added missing assessor property to satisfy PersonalDetails interface
+  personalDetails: { name: '', gender: '', age: '', contact: '', roomNumber: '', assessor: '' },
   personBrief: '',
   answers: {},
   crisisAnswers: {},
@@ -20,7 +22,7 @@ const INITIAL_DATA: AssessmentData = {
 
 const App: React.FC = () => {
   const [data, setData] = useState<AssessmentData>(INITIAL_DATA);
-  const [report, setReport] = useState<string | null>(null);
+  const [report, setReport] = useState<ReportParts | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isQuotaError, setIsQuotaError] = useState(false);

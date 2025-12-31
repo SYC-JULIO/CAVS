@@ -108,6 +108,16 @@ export const AssessmentForm: React.FC<Props> = ({ data, onChange, onGenerate, is
                 />
              </div>
           </div>
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">評估人</label>
+            <input 
+              type="text" 
+              className="w-full border border-slate-300 rounded p-2 text-sm"
+              value={data.personalDetails.assessor}
+              onChange={e => handlePersonalChange('assessor', e.target.value)}
+              placeholder="請輸入評估人姓名"
+            />
+          </div>
           <div className="md:col-span-2">
              <label className="text-xs text-slate-500 mb-1 block">聯絡方式 (選填)</label>
              <input 
