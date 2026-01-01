@@ -63,7 +63,6 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data, onReset
       monthlyTotal += dailyUnitPrice * s.dailyFreq * s.monthlyDays;
     });
 
-    // 個別加值服務名稱轉為標籤化項目 (逗號分隔，Notion 可設為多選)
     const serviceTags = selectedServices.map(s => s.name).join(', ');
 
     const getLightLabel = (score: number) => {
@@ -71,23 +70,42 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data, onReset
       return level === 'Red' ? '🔴 紅燈' : level === 'Yellow' ? '🟡 黃燈' : '🟢 綠燈';
     };
 
+    // 建立極度細分化的 Payload，讓 Make.com 能輕鬆對應到 Notion 不同欄位
     const payload = {
+      // 1. 基本資料欄位
       評估人: data.personalDetails.assessor || '未填寫',
       姓名: data.personalDetails.name,
       房間號碼: data.personalDetails.roomNumber || '未安排',
-      心理危機判定: data.crisisStatus === 'Red' ? '🔴 高度風險' : data.crisisStatus === 'Yellow' ? '🟡 中度風險' : '🟢 穩定',
+      年齡: data.personalDetails.age,
+      性別: data.personalDetails.gender,
+      評估日期: todayDate,
+
+      // 2. 狀態判定欄位
+      心理危機狀態: data.crisisStatus === 'Red' ? '🔴 高度風險' : data.crisisStatus === 'Yellow' ? '🟡 中度風險' : '🟢 穩定',
       性格行為型態: data.personalityType,
-      '照顧模式的複雜度:分數:燈號': `${data.dimensions.physical}分 : ${getLightLabel(data.dimensions.physical)}`,
-      '家庭溝通成本:分數:燈號': `${data.dimensions.family}分 : ${getLightLabel(data.dimensions.family)}`,
-      '衝突與風險管理:分數:燈號': `${data.dimensions.mental}分 : ${getLightLabel(data.dimensions.mental)}`,
-      '後續維運成本:分數:燈號': `${data.dimensions.management}分 : ${getLightLabel(data.dimensions.management)}`,
-      加值服務項目: serviceTags, 
+      
+      // 3. 評估維度分數與燈號 (拆分欄位)
+      '維度1_照顧模式複雜度_分數': data.dimensions.physical,
+      '維度1_照顧模式複雜度_燈號': getLightLabel(data.dimensions.physical),
+      '維度2_家庭溝通成本_分數': data.dimensions.family,
+      '維度2_家庭溝通成本_燈號': getLightLabel(data.dimensions.family),
+      '維度3_衝突與風險管理_分數': data.dimensions.mental,
+      '維度3_衝突與風險管理_燈號': getLightLabel(data.dimensions.mental),
+      '維度4_後續維運成本_分數': data.dimensions.management,
+      '維度4_後續維運成本_燈號': getLightLabel(data.dimensions.management),
+
+      // 4. 加值服務獨立欄位 (依要求分開)
+      加值服務清單: serviceTags, 
       加值服務月費總計: Math.round(monthlyTotal),
-      // 報告內容分拆匯出
+
+      // 5. 報告內容分拆匯出 (依要求分開)
       心理危機處置建議: report.crisisAdvice,
       風險管理策略: report.riskStrategy,
       服務預期產生效益: report.benefitAnalysis,
-      評估日期: todayDate
+      
+      // 6. 補充資訊
+      人物簡述: data.personBrief,
+      其他質性描述: data.qualitativeAnalysis
     };
 
     try {
@@ -186,7 +204,7 @@ export const ReportViewer: React.FC<Props> = ({ report, isLoading, data, onReset
       </div>
 
       <div className="bg-white border-x border-b border-slate-200 p-8 rounded-b-xl print:border-none print:p-0">
-        {/* Personal Details Row for Report - Updated Sequence: Name -> Room -> Age -> Assessor */}
+        {/* 基本資料排列：姓名 -> 房間 -> 年齡 -> 評估人 */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200 text-sm font-medium text-slate-600">
           <div><span className="text-slate-400 text-[10px] uppercase block">姓名</span> {data.personalDetails.name}</div>
           <div><span className="text-slate-400 text-[10px] uppercase block">房間</span> {data.personalDetails.roomNumber || '-'}</div>
